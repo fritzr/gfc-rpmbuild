@@ -93,7 +93,8 @@ BuildRoot: %{_tmppath}/%{name}-%{gcc_version_full}-%{release}-root-%(%{__id_u} -
 BuildRequires: binutils >= 2.20.51.0.2
 # While gcc doesn't include statically linked binaries, during testing
 # -static is used several times.
-#BuildRequires: glibc-static#, sharutils
+#BuildRequires: glibc-static
+BuildRequires: sharutils
 BuildRequires: zlib-devel, gettext, dejagnu, bison, flex 
 #BuildRequires: texinfo, texinfo-tex, /usr/bin/pod2man
 #BuildRequires: systemtap-sdt-devel >= 1.3
