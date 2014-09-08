@@ -63,15 +63,14 @@ Release: %{gcc_release}%{?dist}
 # GCC Runtime Exception.
 License: GPLv3+ and GPLv3+ with exceptions and GPLv2+ with exceptions and LGPLv2+ and BSD
 Group: Development/Languages
-# The source for this package was pulled from upstream's vcs.  Use the
-# following commands to generate the tarball:
-# svn export svn://gcc.gnu.org/svn/gcc/branches/redhat/gcc-4_7-branch@%{SVNREV} gcc-%{version}-%{DATE}
-# tar cf - gcc-%{version}-%{DATE} | bzip2 -9 > gcc-%{version}-%{DATE}.tar.bz2
+#Source0: ftp://gcc.gnu.org/pub/gcc/releases/gcc-%{version}.tar.bz2
 Source0: gcc-%{version}.tar.bz2
 %global isl_version 0.11.1
-Source1: ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 %global cloog_version 0.18.0
+%if %{build_cloog}
+Source1: ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Source2: ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-%{cloog_version}.tar.gz
+%endif
 %global gmp_version 4.3.2
 Source3: ftp://gcc.gnu.org/pub/gcc/infrastructure/gmp-%{gmp_version}.tar.bz2
 %global mpfr_version 2.4.2
@@ -540,7 +539,12 @@ package or when debugging this package.
 %endif
 
 %prep
+%if %{build_cloog}
 %setup -q -n gcc-%{version} -a 1 -a 2 -a 3 -a 4 -a 5
+%else
+%setup -q -n gcc-%{version} -a 3 -a 4 -a 5
+%endif
+
 %patch0 -p0 -b .hack~
 %patch1 -p0 -b .java-nomulti~
 %patch2 -p0 -b .ppc32-retaddr~
