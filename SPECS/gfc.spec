@@ -978,6 +978,14 @@ FULLEPATH=%{buildroot}%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_versio
 cp -a cloog-install/lib/libcloog-isl.so.4 $FULLPATH/
 %endif
 
+# rename source directory from gcc-{version} to gcc-{version_full}
+if [ -f %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version} ]; then
+  mkdir -p %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version_full}
+  mv -f %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version}/* \
+        %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version_full}
+  rmdir %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version}
+fi
+
 # fix some things
 ln -sf %{program_prefix}gcc %{buildroot}%{_prefix}/bin/%{program_prefix}cc
 rm -f %{buildroot}%{_prefix}/lib/%{program_prefix}cpp
@@ -1132,6 +1140,10 @@ for i in `find . -name \*.py`; do
   touch -r $i %{buildroot}%{_prefix}/share/gcc-%{gcc_version}/python/$i
 done
 touch -r hook.in %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc++*gdb.py
+mkdir -p %{buildroot}%{_prefix}/share/gcc-%{gcc_version_full}
+mv -f %{buildroot}%{_prefix}/share/gcc-%{gcc_version}/* \
+      %{buildroot}%{_prefix}/share/gcc-%{gcc_version_full}
+rmdir %{buildroot}%{_prefix}/share/gcc-%{gcc_version}
 popd
 
 pushd $FULLPATH
@@ -1394,7 +1406,7 @@ rm -f %{buildroot}/lib64/libgcc_s*.so*
 rm -f %{buildroot}%{mandir}/man3/ffi*
 
 # Help plugins find out nvra.
-echo gcc-%{version}-%{release}.%{_arch} > $FULLPATH/rpmver
+echo gfc-%{gcc_version_full}-%{release}.%{_arch} > $FULLPATH/rpmver
 
 # Move lib64 stuff so it doesn't conflict with another gcc install
 # This overwrites the links to /lib64 and /usr/lib64 but nothing else :)
@@ -1860,9 +1872,9 @@ fi
 %dir %{_datadir}/gdb/auto-load/%{_prefix}
 %dir %{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/
 %{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc*gdb.py*
-%dir %{_prefix}/share/gcc-%{gcc_version}
-%dir %{_prefix}/share/gcc-%{gcc_version}/python
-%{_prefix}/share/gcc-%{gcc_version}/python/libstdcxx
+%dir %{_prefix}/share/gcc-%{gcc_version_full}
+%dir %{_prefix}/share/gcc-%{gcc_version_full}/python
+%{_prefix}/share/gcc-%{gcc_version_full}/python/libstdcxx
 
 %files -n libstdc++-devel
 %defattr(-,root,root,-)
