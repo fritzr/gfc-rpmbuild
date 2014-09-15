@@ -153,6 +153,7 @@ Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 AutoReq: true
 Provides: bundled(libiberty)
+Provides: libgcc_s.so.1
 
 Patch0: gcc48-hack.patch
 Patch1: gcc48-java-nomulti.patch
@@ -1087,16 +1088,16 @@ mv %{buildroot}%{_prefix}/%{_lib}/libgfortran.spec $FULLPATH/
 mv %{buildroot}%{_prefix}/%{_lib}/libitm.spec $FULLPATH/
 %endif
 
-mkdir -p %{buildroot}/%{_lib}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libgcc_s.so.1 %{buildroot}/%{_lib}/libgcc_s-%{gcc_version_full}.so.1
-chmod 755 %{buildroot}/%{_lib}/libgcc_s-%{gcc_version_full}.so.1
-ln -sf libgcc_s-%{gcc_version_full}.so.1 %{buildroot}/%{_lib}/libgcc_s.so.1
-ln -sf /%{_lib}/libgcc_s.so.1 $FULLPATH/libgcc_s.so
+pushd $FULLPATH
+mv -f %{buildroot}%{_prefix}/%{_lib}/libgcc_s.so.1 libgcc_s-%{gcc_version_full}.so.1
+chmod 755 libgcc_s-%{gcc_version_full}.so.1
+ln -sf libgcc_s-%{gcc_version_full}.so.1 libgcc_s.so.1
+ln -sf libgcc_s.so.1 libgcc_s.so
 %ifarch sparcv9 ppc
-ln -sf /lib64/libgcc_s.so.1 $FULLPATH/64/libgcc_s.so
+ln -sf libgcc_s.so.1 64/libgcc_s.so
 %endif
 %ifarch %{multilib_64_archs}
-ln -sf /lib/libgcc_s.so.1 $FULLPATH/32/libgcc_s.so
+ln -sf /lib/libgcc_s.so.1 32/libgcc_s.so
 %endif
 %ifarch ppc
 rm -f $FULLPATH/libgcc_s.so
@@ -1122,6 +1123,7 @@ echo '/* GNU ld script
 OUTPUT_FORMAT(elf32-littlearm)
 GROUP ( /lib/libgcc_s.so.1 libgcc.a )' > $FULLPATH/libgcc_s.so
 %endif
+popd
 
 mv -f %{buildroot}%{_prefix}/%{_lib}/libgomp.spec $FULLPATH/
 
@@ -1410,10 +1412,8 @@ echo gfc-%{gcc_version_full}-%{release}.%{_arch} > $FULLPATH/rpmver
 
 # Move lib64 stuff so it doesn't conflict with another gcc install
 # This overwrites the links to /lib64 and /usr/lib64 but nothing else :)
-mv -f %{buildroot}/%{_lib}/* $FULLPATH
 mv -f %{buildroot}%{_prefix}/%{_lib}/* $FULLPATH
 if [ %{_lib} = lib64 ]; then
-  rmdir %{buildroot}/lib64
   rmdir %{buildroot}%{_prefix}/lib64
 fi
 
@@ -1693,7 +1693,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcov.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_eh.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s.so
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s*.so*
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgomp.so
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgomp.spec
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgomp.a
@@ -1709,7 +1709,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgcc.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgcov.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgcc_eh.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgcc_s.so
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgcc_s*.so*
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgomp.so
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libgomp.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libmudflap.a
@@ -1740,7 +1740,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgcc.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgcov.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgcc_eh.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgcc_s.so
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgcc_s*.so*
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgomp.so
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libgomp.a
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libmudflap.a
@@ -1823,8 +1823,7 @@ fi
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s.so
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s.so.1
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s*.so*
 %doc gcc/COPYING* COPYING.RUNTIME
 
 %files c++
