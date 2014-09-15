@@ -14,22 +14,22 @@
 %global build_libquadmath 0
 %endif
 %ifarch %{ix86} x86_64 ppc ppc64 ppc64p7
-%global build_libasan 1
+%global build_libasan 0
 %else
 %global build_libasan 0
 %endif
 %ifarch x86_64
-%global build_libtsan 1
+%global build_libtsan 0
 %else
 %global build_libtsan 0
 %endif
 %ifarch %{ix86} x86_64 ppc ppc64 ppc64le ppc64p7 s390 s390x %{arm}
-%global build_libatomic 1
+%global build_libatomic 0
 %else
 %global build_libatomic 0
 %endif
 %ifarch %{ix86} x86_64 %{arm} alpha ppc ppc64 ppc64le ppc64p7 s390 s390x
-%global build_libitm 1
+%global build_libitm 0
 %else
 %global build_libitm 0
 %endif
@@ -1154,51 +1154,7 @@ ln -sf ../../../libatomic.so.1.* libatomic.so
 ln -sf ../../../libasan.so.0.* libasan.so
 mv ../../../libasan_preinit.o libasan_preinit.o
 %endif
-else
-ln -sf ../../../../%{_lib}/libstdc++.so.6.*[0-9] libstdc++.so
-ln -sf ../../../../%{_lib}/libgfortran.so.3.* libgfortran.so
-ln -sf ../../../../%{_lib}/libgomp.so.1.* libgomp.so
-ln -sf ../../../../%{_lib}/libmudflap.so.0.* libmudflap.so
-ln -sf ../../../../%{_lib}/libmudflapth.so.0.* libmudflapth.so
-%if %{build_libquadmath}
-ln -sf ../../../../%{_lib}/libquadmath.so.0.* libquadmath.so
-%endif
-%if %{build_libitm}
-ln -sf ../../../../%{_lib}/libitm.so.1.* libitm.so
-%endif
-%if %{build_libatomic}
-ln -sf ../../../../%{_lib}/libatomic.so.1.* libatomic.so
-%endif
-%if %{build_libasan}
-ln -sf ../../../../%{_lib}/libasan.so.0.* libasan.so
-mv ../../../../%{_lib}/libasan_preinit.o libasan_preinit.o
-%endif
-%if %{build_libtsan}
-rm -f libtsan.so
-echo 'INPUT ( %{_prefix}/%{_lib}/'`echo ../../../../%{_lib}/libtsan.so.0.* | sed 's,^.*libt,libt,'`' )' > libtsan.so
-%endif
 fi
-
-mv -f %{buildroot}%{_prefix}/%{_lib}/libstdc++.*a $FULLLPATH/
-mv -f %{buildroot}%{_prefix}/%{_lib}/libsupc++.*a $FULLLPATH/
-mv -f %{buildroot}%{_prefix}/%{_lib}/libgfortran.*a $FULLLPATH/
-mv -f %{buildroot}%{_prefix}/%{_lib}/libgomp.*a .
-mv -f %{buildroot}%{_prefix}/%{_lib}/libmudflap{,th}.*a $FULLLPATH/
-%if %{build_libquadmath}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libquadmath.*a $FULLLPATH/
-%endif
-%if %{build_libitm}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libitm.*a $FULLLPATH/
-%endif
-%if %{build_libatomic}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libatomic.*a $FULLLPATH/
-%endif
-%if %{build_libasan}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libasan.*a $FULLLPATH/
-%endif
-%if %{build_libtsan}
-mv -f %{buildroot}%{_prefix}/%{_lib}/libtsan.*a $FULLLPATH/
-%endif
 
 %ifarch sparcv9 ppc
 ln -sf ../`echo ../../../../lib/libstdc++.so.6.*[0-9] | sed s~/lib/~/lib64/~` 64/libstdc++.so
@@ -1439,6 +1395,15 @@ rm -f %{buildroot}%{mandir}/man3/ffi*
 
 # Help plugins find out nvra.
 echo gcc-%{version}-%{release}.%{_arch} > $FULLPATH/rpmver
+
+# Move lib64 stuff so it doesn't conflict with another gcc install
+# This overwrites the links to /lib64 and /usr/lib64 but nothing else :)
+mv -f %{buildroot}/%{_lib}/* $FULLPATH
+mv -f %{buildroot}%{_prefix}/%{_lib}/* $FULLPATH
+if [ %{_lib} = lib64 ]; then
+  rmdir %{buildroot}/lib64
+  rmdir %{buildroot}%{_prefix}/lib64
+fi
 
 %check
 cd obj-%{gcc_target_platform}
@@ -1843,8 +1808,11 @@ fi
 
 %files -n libgcc
 %defattr(-,root,root,-)
-/%{_lib}/libgcc_s-%{gcc_version_full}.so.1
-/%{_lib}/libgcc_s.so.1
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s.so
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s.so.1
 %doc gcc/COPYING* COPYING.RUNTIME
 
 %files c++
@@ -1883,7 +1851,10 @@ fi
 
 %files -n libstdc++
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libstdc++.so.6*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libstdc++.so.6*
 %dir %{_datadir}/gdb
 %dir %{_datadir}/gdb/auto-load
 %dir %{_datadir}/gdb/auto-load/%{_prefix}
@@ -1978,7 +1949,10 @@ fi
 
 %files -n libgfortran
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libgfortran.so.3*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgfortran.so.3*
 
 %files -n libgfortran-static
 %defattr(-,root,root,-)
@@ -1999,14 +1973,20 @@ fi
 
 %files -n libgomp
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libgomp.so.1*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgomp.so.1*
 %{_infodir}/%{program_prefix}libgomp.info*
 %doc rpm.doc/changelogs/libgomp/ChangeLog*
 
 %files -n libmudflap
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libmudflap.so.0*
-%{_prefix}/%{_lib}/libmudflapth.so.0*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflap.so.0*
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflapth.so.0*
 
 %files -n libmudflap-devel
 %defattr(-,root,root,-)
@@ -2046,7 +2026,10 @@ fi
 %if %{build_libquadmath}
 %files -n libquadmath
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libquadmath.so.0*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libquadmath.so.0*
 %{_infodir}/%{program_prefix}libquadmath.info*
 %doc rpm.doc/libquadmath/COPYING*
 
@@ -2084,7 +2067,10 @@ fi
 %if %{build_libitm}
 %files -n libitm
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libitm.so.1*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libitm.so.1*
 %{_infodir}/%{program_prefix}libitm.info*
 
 %files -n libitm-devel
@@ -2121,7 +2107,10 @@ fi
 %if %{build_libatomic}
 %files -n libatomic
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libatomic.so.1*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libatomic.so.1*
 
 %files -n libatomic-static
 %defattr(-,root,root,-)
@@ -2145,7 +2134,10 @@ fi
 %if %{build_libasan}
 %files -n libasan
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libasan.so.0*
+%dir {_prefix}/lib/gcc
+%dir {_prefix}/lib/gcc/%{gcc_target_platform}
+%dir {_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libasan.so.0*
 
 %files -n libasan-static
 %defattr(-,root,root,-)
@@ -2169,7 +2161,10 @@ fi
 %if %{build_libtsan}
 %files -n libtsan
 %defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libtsan.so.0*
+%dir %{_prefix}/lib/gcc
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libtsan.so.0*
 
 %files -n libtsan-static
 %defattr(-,root,root,-)
