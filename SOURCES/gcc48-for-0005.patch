@@ -1642,7 +1642,7 @@ index 501a4eb..06d9e6c 100644
  }
  
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 0e89a4c..3788adc 100644
+index 0e89a4c..5b874af 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
 @@ -333,9 +333,9 @@ gfc_copy_expr (gfc_expr *p)
@@ -1897,7 +1897,7 @@ index 0e89a4c..3788adc 100644
        {
          if (!c->attr.pointer
  	     && gfc_has_default_initializer (c->ts.u.derived))
-@@ -3874,26 +4078,118 @@ gfc_has_default_initializer (gfc_symbol *der)
+@@ -3874,26 +4078,124 @@ gfc_has_default_initializer (gfc_symbol *der)
          if (c->initializer)
  	  return true;
        }
@@ -1948,10 +1948,9 @@ index 0e89a4c..3788adc 100644
 +  gfc_expr *init = NULL;
 +
 +  if (c->initializer) return c->initializer;
-+  if (!generate) return NULL;
 +
 +  /* Recursively handle derived type components */
-+  if (c->ts.type == BT_DERIVED || c->ts.type == BT_CLASS)
++  if (generate && (c->ts.type == BT_DERIVED || c->ts.type == BT_CLASS))
 +    init = gfc_default_initializer (&c->ts, true);
 +
 +  else if (c->ts.type == BT_UNION && c->ts.u.derived->components)
@@ -1962,18 +1961,25 @@ index 0e89a4c..3788adc 100644
 +
 +    /* Try to take an existing initializer from a map. */
 +    gfc_constructor *ctor;
++    init = get_last_init (c->ts.u.derived, &map);
++
++    if (!map)
++    {
++      gcc_assert (init == NULL);
++      /* If no maps had an explicit initializer, and generate is not set, then
++         this union has no initializer. Otherwise generate an initializer from
++         the first map. */
++      /* TODO: Use the largest map / initialize the entire union.
++         This can only be determined in translation (?) */
++      if (!generate)
++        return NULL;
++      map = c->ts.u.derived->components;
++      init = gfc_default_initializer (&map->ts, true);
++    }
++
 +    ctor = gfc_constructor_get ();
-+    ctor->expr = get_last_init (c->ts.u.derived, &map);
-+
-+    /* If no maps had an explicit initializer, generate a default
-+       initializer for just the first map.
-+       TODO: Use the largest map / initialize the entire union.
-+       This can only be determined in translation (?) */
-+    if (!map) map = c->ts.u.derived->components;
-+
++    ctor->expr = init;
 +    ctor->n.component = map;
-+    if (!ctor->expr)
-+      ctor->expr = gfc_default_initializer (&map->ts, true);
 +
 +    init = gfc_get_structure_constructor_expr (c->ts.type, c->ts.kind, &c->loc);
 +    init->ts = c->ts;
@@ -1981,7 +1987,7 @@ index 0e89a4c..3788adc 100644
 +  }
 +
 +  /* Simple components */
-+  else
++  else if (generate)
 +  {
 +    init = gfc_build_default_init_expr (&c->ts, &c->loc);
 +    gfc_apply_init (&c->ts, &c->attr, init);
@@ -2025,7 +2031,7 @@ index 0e89a4c..3788adc 100644
  
    if (!comp)
      return NULL;
-@@ -3906,11 +4202,14 @@ gfc_default_initializer (gfc_typespec *ts)
+@@ -3906,11 +4208,14 @@ gfc_default_initializer (gfc_typespec *ts)
      {
        gfc_constructor *ctor = gfc_constructor_get();
  
@@ -2274,7 +2280,7 @@ index bd1aeb9..698598c 100644
  /* primary.c */
  symbol_attribute gfc_variable_attr (gfc_expr *, gfc_typespec *);
 diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
-index 4f9008d..1663e27 100644
+index 4f9008d..613b5af 100644
 --- a/gcc/fortran/gfortran.texi
 +++ b/gcc/fortran/gfortran.texi
 @@ -473,9 +473,9 @@ The GNU Fortran compiler is able to compile nearly all
@@ -2454,7 +2460,7 @@ index 4f9008d..1663e27 100644
  Here is an example of code using the non portable record structure syntax:
  
  @example
-@@ -2073,15 +2110,485 @@ store_catalog(12) = pear
+@@ -2073,15 +2110,484 @@ store_catalog(12) = pear
  print *, store_catalog(12)
  @end example
  
@@ -2869,10 +2875,9 @@ index 4f9008d..1663e27 100644
 +
 +@code{AUTOMATIC} is the default for local variables smaller than
 +@option{-fmax-stack-var-size}, unless @option{-fno-automatic} is given.
-+Variables marked @code{AUTOMATIC} will be placed on the stack whenever
-+possible. This includes inside a blanket SAVE namespace, but not with
-+@option{-fno-automatic} or if the variable is larger than
-+@option{-fmax-stack-var-size}.
++Variables marked @code{AUTOMATIC} will be stack automatic variables whenever
++possible. This attribute overrides @option{-fno-automatic},
++@option{-fmax-stack-var-size}, and blanket @code{SAVE} statements.
 +
 +Examples:
 +
@@ -2888,7 +2893,7 @@ index 4f9008d..1663e27 100644
 +subroutine f
 +  integer a, b, c, x, y, z
 +  static :: x
-+  static y
++  save y
 +  automatic z, c
 +  ! a, b, c, and z are automatic
 +  ! x and y are static
@@ -2898,8 +2903,8 @@ index 4f9008d..1663e27 100644
 +! Compiled with -fno-automatic
 +subroutine f
 +  integer a, b, c, d
-+  automatic :: a  ! warning is produced
-+  ! all variables are static
++  automatic :: a
++  ! a is automatic; b, c, and d are static
 +ensubroutine
 +@end example
 +
@@ -6892,7 +6897,7 @@ index a94ae21..8a3e485 100644
  
    expr = gfc_get_expr ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index 43eb240..4958276 100644
+index 43eb240..fdfed7a 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -520,7 +520,7 @@ static void
@@ -7773,7 +7778,22 @@ index 43eb240..4958276 100644
  }
  
  /* Add an initialization expression to a local variable.  */
-@@ -11228,7 +11234,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+@@ -11102,9 +11108,11 @@ apply_default_init_local (gfc_symbol *sym)
+      entry, so we just add a static initializer. Note that automatic variables
+      are stack allocated even with -fno-automatic; we have also to exclude
+      result variable, which are also nonstatic.  */
+-  if (sym->attr.save || sym->ns->save_all
+-      || (gfc_option.flag_max_stack_var_size == 0 && !sym->attr.result
+-	  && (!sym->attr.dimension || !is_non_constant_shape_array (sym))))
++  if (!sym->attr.automatic
++      && (sym->attr.save || sym->ns->save_all
++          || (gfc_option.flag_max_stack_var_size == 0 && !sym->attr.result
++              && !sym->ns->proc_name->attr.recursive
++              && (!sym->attr.dimension || !is_non_constant_shape_array (sym)))))
+     {
+       /* Don't clobber an existing initializer!  */
+       gcc_assert (sym->value == NULL);
+@@ -11228,7 +11236,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
        gfc_find_symbol (sym->ts.u.derived->name, sym->ns, 0, &s);
        if (s && s->attr.generic)
  	s = gfc_find_dt_in_generic (s);
@@ -7782,7 +7802,16 @@ index 43eb240..4958276 100644
  	{
  	  gfc_error ("The type '%s' cannot be host associated at %L "
  		     "because it is blocked by an incompatible object "
-@@ -11262,7 +11268,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+@@ -11249,7 +11257,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+      a hidden default for allocatable components.  */
+   if (!(sym->value || no_init_flag) && sym->ns->proc_name
+       && sym->ns->proc_name->attr.flavor == FL_MODULE
+-      && !sym->ns->save_all && !sym->attr.save
++      && !(sym->ns->save_all && !sym->attr.automatic) && !sym->attr.save
+       && !sym->attr.pointer && !sym->attr.allocatable
+       && gfc_has_default_initializer (sym->ts.u.derived)
+       && gfc_notify_std (GFC_STD_F2008, "Implied SAVE for "
+@@ -11262,7 +11270,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
    if (!(sym->value || sym->attr.pointer || sym->attr.allocatable)
        && (!no_init_flag || sym->attr.intent == INTENT_OUT))
      {
@@ -7791,7 +7820,7 @@ index 43eb240..4958276 100644
      }
  
    return SUCCESS;
-@@ -12226,7 +12232,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -12226,7 +12234,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
    locus where;
    gfc_symbol* me_arg;
    gfc_symbol* super_type;
@@ -7800,7 +7829,7 @@ index 43eb240..4958276 100644
  
    gcc_assert (stree);
  
-@@ -12403,7 +12409,8 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -12403,7 +12411,8 @@ resolve_typebound_procedure (gfc_symtree* stree)
        }
  
    /* Try to find a name collision with an inherited component.  */
@@ -7810,7 +7839,7 @@ index 43eb240..4958276 100644
      {
        gfc_error ("Procedure '%s' at %L has the same name as an inherited"
  		 " component of '%s'",
-@@ -12551,7 +12558,7 @@ check_defined_assignments (gfc_symbol *derived)
+@@ -12551,7 +12560,7 @@ check_defined_assignments (gfc_symbol *derived)
  
    for (c = derived->components; c; c = c->next)
      {
@@ -7819,7 +7848,7 @@ index 43eb240..4958276 100644
  	  || c->attr.pointer
  	  || c->attr.allocatable
  	  || c->attr.proc_pointer_comp
-@@ -12576,402 +12583,440 @@ check_defined_assignments (gfc_symbol *derived)
+@@ -12576,402 +12585,440 @@ check_defined_assignments (gfc_symbol *derived)
      }
  }
  
@@ -8602,7 +8631,7 @@ index 43eb240..4958276 100644
    check_defined_assignments (sym);
  
    if (!sym->attr.defined_assign_comp && super_type)
-@@ -13033,8 +13078,8 @@ resolve_fl_derived (gfc_symbol *sym)
+@@ -13033,8 +13080,8 @@ resolve_fl_derived (gfc_symbol *sym)
    if (sym->attr.is_class && sym->ts.u.derived == NULL)
      {
        /* Fix up incomplete CLASS symbols.  */
@@ -8613,7 +8642,7 @@ index 43eb240..4958276 100644
  
        /* Nothing more to do for unlimited polymorphic entities.  */
        if (data->ts.u.derived->attr.unlimited_polymorphic)
-@@ -13255,6 +13300,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13255,6 +13302,11 @@ resolve_symbol (gfc_symbol *sym)
      return;
    sym->resolved = 1;
  
@@ -8625,7 +8654,7 @@ index 43eb240..4958276 100644
    if (sym->attr.artificial)
      return;
  
-@@ -13320,7 +13370,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13320,7 +13372,11 @@ resolve_symbol (gfc_symbol *sym)
        return;
      }
  
@@ -8638,7 +8667,7 @@ index 43eb240..4958276 100644
      return;
  
    /* Symbols that are module procedures with results (functions) have
-@@ -13540,7 +13594,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13540,7 +13596,7 @@ resolve_symbol (gfc_symbol *sym)
       interoperability when a variable is declared of that type.  */
    if (sym->attr.is_bind_c && sym->attr.implicit_type == 0 &&
        sym->attr.use_assoc == 0 && sym->attr.dummy == 0 &&
@@ -8647,7 +8676,26 @@ index 43eb240..4958276 100644
      {
        gfc_try t = SUCCESS;
  
-@@ -14472,8 +14526,7 @@ sequence_type (gfc_typespec ts)
+@@ -13716,7 +13772,7 @@ resolve_symbol (gfc_symbol *sym)
+   if (class_attr.codimension
+       && !(class_attr.allocatable || sym->attr.dummy || sym->attr.save
+ 	   || sym->attr.select_type_temporary
+-	   || sym->ns->save_all
++	   || (sym->ns->save_all && !sym->attr.automatic)
+ 	   || sym->ns->proc_name->attr.flavor == FL_MODULE
+ 	   || sym->ns->proc_name->attr.is_main_program
+ 	   || sym->attr.function || sym->attr.result || sym->attr.use_assoc))
+@@ -13854,7 +13910,8 @@ resolve_symbol (gfc_symbol *sym)
+     }
+ 
+   /* Check threadprivate restrictions.  */
+-  if (sym->attr.threadprivate && !sym->attr.save && !sym->ns->save_all
++  if (sym->attr.threadprivate && !sym->attr.save 
++      && !(sym->ns->save_all && !sym->attr.automatic)
+       && (!sym->attr.in_common
+ 	  && sym->module == NULL
+ 	  && (sym->ns->proc_name == NULL
+@@ -14472,8 +14529,7 @@ sequence_type (gfc_typespec ts)
  
    switch (ts.type)
    {
@@ -8657,7 +8705,7 @@ index 43eb240..4958276 100644
        if (ts.u.derived->components == NULL)
  	return SEQ_NONDEFAULT;
  
-@@ -14559,7 +14612,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
+@@ -14559,7 +14615,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
  
    for (; c ; c = c->next)
      {
@@ -8977,7 +9025,7 @@ index 7c21f22..804a96b 100644
  {
    gfc_expr *result;
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 1b3702f..28597af 100644
+index 1b3702f..704a509 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -40,6 +40,7 @@ const mstring flavors[] =
@@ -9315,21 +9363,18 @@ index 1b3702f..28597af 100644
  	    gfc_delete_symtree (&p->ns->sym_root, p->name);
  
  	  gfc_release_symbol (p);
-@@ -3636,6 +3760,13 @@ gfc_is_var_automatic (gfc_symbol *sym)
+@@ -3636,6 +3760,10 @@ gfc_is_var_automatic (gfc_symbol *sym)
        && sym->ts.u.cl
        && !gfc_is_constant_expr (sym->ts.u.cl->length))
      return true;
 +  /* Variables with explicit AUTOMATIC attribute. */
 +  if (sym->attr.automatic)
-+  {
-+    gfc_warning_now ("%s at %L marked AUTOMATIC in blanket SAVE namespace "
-+             "so variable will not be SAVEd", sym->name, &sym->declared_at);
 +    return true;
-+  }
++
    return false;
  }
  
-@@ -3859,7 +3990,7 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
+@@ -3859,7 +3987,7 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
          }
        
        /* BIND(C) derived types must have interoperable components.  */
@@ -9338,7 +9383,7 @@ index 1b3702f..28597af 100644
  	  && curr_comp->ts.u.derived->ts.is_iso_c != 1 
            && curr_comp->ts.u.derived != derived_sym)
          {
-@@ -4548,9 +4679,7 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
+@@ -4548,9 +4676,7 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
  	  gfc_component *tmp_comp = NULL;
  	  char comp_name[(GFC_MAX_SYMBOL_LEN * 2) + 1];
  
@@ -9349,7 +9394,7 @@ index 1b3702f..28597af 100644
  
  	  /* Generate real derived type.  */
  	  tmp_symtree = gfc_find_symtree (gfc_current_ns->sym_root,
-@@ -4911,15 +5040,21 @@ gfc_type_compatible (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -4911,15 +5037,21 @@ gfc_type_compatible (gfc_typespec *ts1, gfc_typespec *ts2)
    bool is_class2 = (ts2->type == BT_CLASS);
    bool is_derived1 = (ts1->type == BT_DERIVED);
    bool is_derived2 = (ts2->type == BT_DERIVED);
@@ -9372,7 +9417,7 @@ index 1b3702f..28597af 100644
    if (is_derived1 && is_derived2)
      return gfc_compare_derived_types (ts1->u.derived, ts2->u.derived);
  
-@@ -4978,12 +5113,12 @@ gfc_find_dt_in_generic (gfc_symbol *sym)
+@@ -4978,12 +5110,12 @@ gfc_find_dt_in_generic (gfc_symbol *sym)
  {
    gfc_interface *intr = NULL;
  
@@ -9433,9 +9478,18 @@ index 26a5de2..4fe7d5c 100644
        for (c = gfc_constructor_first (e->value.constructor),
  	   cmp = e->ts.u.derived->components;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 7d23561..f9e3bcd 100644
+index 7d23561..4733544 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
+@@ -593,7 +593,7 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
+     }
+ 
+   /* Keep variables larger than max-stack-var-size off stack.  */
+-  if (!sym->ns->proc_name->attr.recursive
++  if (!sym->ns->proc_name->attr.recursive && !sym->attr.automatic
+       && INTEGER_CST_P (DECL_SIZE_UNIT (decl))
+       && !gfc_can_put_var_on_stack (DECL_SIZE_UNIT (decl))
+ 	 /* Put variable length auto array pointers always into stack.  */
 @@ -693,14 +693,14 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
  	  st->n.sym = sym;
  	  sym->refs++;
@@ -9988,6 +10042,92 @@ index 0000000..40512b0
 +          call abort
 +        endif
 +      endsubroutine
+diff --git a/gcc/testsuite/gfortran.dg/auto_save_2.f90 b/gcc/testsuite/gfortran.dg/auto_save_2.f90
+new file mode 100644
+index 0000000..0d39d48
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/auto_save_2.f90
+@@ -0,0 +1,52 @@
++! { dg-do run }
++! { dg-options "-fno-automatic -finit-local-zero" }
++!
++! Make sure variables are saved with -fno-automatic except in
++! functions marked RECURSIVE, and that they are still initialized with
++! -finit-local-zero.
++!
++
++function f (x)
++implicit none
++  integer f, x
++  integer a ! should be SAVEd
++  a = a + x ! should increment by y every time
++  f = a
++  return
++endfunction
++
++recursive function g (x)
++implicit none
++  integer g, x
++  integer b ! should be automatic
++  b = b + x ! should be set to y every time
++  g = b
++  return
++endfunction
++
++implicit none
++integer f, g
++
++! Should return static value of a; accumulates y
++if ( f(3) .ne. 3 ) then
++  call abort ()
++endif
++if ( f(4) .ne. 7 ) then
++  call abort ()
++endif
++if ( f(2) .ne. 9 ) then
++  call abort ()
++endif
++
++! Should return automatic value of a; equal to y each time
++if ( g(3) .ne. 3 ) then
++  call abort ()
++endif
++if ( g(4) .ne. 4 ) then
++  call abort ()
++endif
++if ( g(2) .ne. 2 ) then
++  call abort ()
++endif
++
++end
+diff --git a/gcc/testsuite/gfortran.dg/cray_pointers_10.f90 b/gcc/testsuite/gfortran.dg/cray_pointers_10.f90
+new file mode 100644
+index 0000000..fcc0132
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/cray_pointers_10.f90
+@@ -0,0 +1,22 @@
++! { dg-do compile }
++! { dg-options "-fcray-pointer" }
++!
++! Since the introduction of Cray pointers in 4.1.0 as late as 4.8.3,
++! component declarations within derived types would overwrite the typespec of 
++! variables with the same name who were Cray pointees.
++implicit none
++
++type t1
++  integer i
++end type t1
++type(t1) x
++
++pointer (x_ptr, x)
++
++type t2
++  real x ! should not overwrite x's type
++end type t2
++
++x%i = 0 ! should see no error here
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dec/README b/gcc/testsuite/gfortran.dg/dec/README
 new file mode 100644
 index 0000000..56973d2
@@ -10033,11 +10173,11 @@ index 0000000..eb49db8
 +    return
 +  end function Up
 +end
-diff --git a/gcc/testsuite/gfortran.dg/dec/acos.for b/gcc/testsuite/gfortran.dg/dec/acos.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/acos.f b/gcc/testsuite/gfortran.dg/dec/acos.f
 new file mode 100644
 index 0000000..ef95933
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/acos.for
++++ b/gcc/testsuite/gfortran.dg/dec/acos.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -10069,11 +10209,11 @@ index 0000000..ef95933
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/acosd.for b/gcc/testsuite/gfortran.dg/dec/acosd.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/acosd.f b/gcc/testsuite/gfortran.dg/dec/acosd.f
 new file mode 100644
 index 0000000..3c70b9d
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/acosd.for
++++ b/gcc/testsuite/gfortran.dg/dec/acosd.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10105,11 +10245,11 @@ index 0000000..3c70b9d
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/asin.for b/gcc/testsuite/gfortran.dg/dec/asin.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/asin.f b/gcc/testsuite/gfortran.dg/dec/asin.f
 new file mode 100644
 index 0000000..9c26039
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/asin.for
++++ b/gcc/testsuite/gfortran.dg/dec/asin.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10141,11 +10281,11 @@ index 0000000..9c26039
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/asind.for b/gcc/testsuite/gfortran.dg/dec/asind.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/asind.f b/gcc/testsuite/gfortran.dg/dec/asind.f
 new file mode 100644
 index 0000000..4c24331
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/asind.for
++++ b/gcc/testsuite/gfortran.dg/dec/asind.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10245,11 +10385,11 @@ index 0000000..40512b0
 +          call abort
 +        endif
 +      endsubroutine
-diff --git a/gcc/testsuite/gfortran.dg/dec/atan.for b/gcc/testsuite/gfortran.dg/dec/atan.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/atan.f b/gcc/testsuite/gfortran.dg/dec/atan.f
 new file mode 100644
 index 0000000..de226c4
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atan.for
++++ b/gcc/testsuite/gfortran.dg/dec/atan.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10281,11 +10421,11 @@ index 0000000..de226c4
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/atan2d.for b/gcc/testsuite/gfortran.dg/dec/atan2d.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/atan2d.f b/gcc/testsuite/gfortran.dg/dec/atan2d.f
 new file mode 100644
 index 0000000..67183ec
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atan2d.for
++++ b/gcc/testsuite/gfortran.dg/dec/atan2d.f
 @@ -0,0 +1,46 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10333,11 +10473,11 @@ index 0000000..67183ec
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/atand.for b/gcc/testsuite/gfortran.dg/dec/atand.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/atand.f b/gcc/testsuite/gfortran.dg/dec/atand.f
 new file mode 100644
 index 0000000..796fe1f
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atand.for
++++ b/gcc/testsuite/gfortran.dg/dec/atand.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -10369,11 +10509,11 @@ index 0000000..796fe1f
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_btest.for b/gcc/testsuite/gfortran.dg/dec/bijk_btest.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_btest.f b/gcc/testsuite/gfortran.dg/dec/bijk_btest.f
 new file mode 100644
 index 0000000..f21cb1a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_btest.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_btest.f
 @@ -0,0 +1,35 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10410,11 +10550,11 @@ index 0000000..f21cb1a
 +      L  =  BTEST(9  , 3  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_float.for b/gcc/testsuite/gfortran.dg/dec/bijk_float.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_float.f b/gcc/testsuite/gfortran.dg/dec/bijk_float.f
 new file mode 100644
 index 0000000..deff903
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_float.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_float.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10444,11 +10584,11 @@ index 0000000..deff903
 +      R = FLOAT (9  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iabs.for b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f
 new file mode 100644
 index 0000000..a7a553d
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10479,11 +10619,11 @@ index 0000000..a7a553d
 +      B  =  IABS(9  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iand.for b/gcc/testsuite/gfortran.dg/dec/bijk_iand.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iand.f b/gcc/testsuite/gfortran.dg/dec/bijk_iand.f
 new file mode 100644
 index 0000000..48fd07c
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_iand.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_iand.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10514,11 +10654,11 @@ index 0000000..48fd07c
 +      C  =  IAND(9  , 3  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.for b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f
 new file mode 100644
 index 0000000..fccc6b4
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10549,11 +10689,11 @@ index 0000000..fccc6b4
 +      C  =  IBCLR(I ,  POS)
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibset.for b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f
 new file mode 100644
 index 0000000..5d39a0a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10584,11 +10724,11 @@ index 0000000..5d39a0a
 +      C  =  IBSET(I ,  POS)
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ieor.for b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f
 new file mode 100644
 index 0000000..f38ac9e
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10619,11 +10759,11 @@ index 0000000..f38ac9e
 +      C  =  IEOR(9  , 3  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ior.for b/gcc/testsuite/gfortran.dg/dec/bijk_ior.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ior.f b/gcc/testsuite/gfortran.dg/dec/bijk_ior.f
 new file mode 100644
 index 0000000..70e9a2b
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_ior.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_ior.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10654,11 +10794,11 @@ index 0000000..70e9a2b
 +      C  =  IOR(9  , 3  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_mod.for b/gcc/testsuite/gfortran.dg/dec/bijk_mod.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_mod.f b/gcc/testsuite/gfortran.dg/dec/bijk_mod.f
 new file mode 100644
 index 0000000..6cf5822
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bijk_mod.for
++++ b/gcc/testsuite/gfortran.dg/dec/bijk_mod.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-intrinsic-ints" }
@@ -10689,11 +10829,11 @@ index 0000000..6cf5822
 +      C  =  MOD(9  , 3  )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and1.for b/gcc/testsuite/gfortran.dg/dec/bits_and1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and1.f b/gcc/testsuite/gfortran.dg/dec/bits_and1.f
 new file mode 100644
 index 0000000..eb184ae
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_and1.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_and1.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10724,11 +10864,11 @@ index 0000000..eb184ae
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and2.for b/gcc/testsuite/gfortran.dg/dec/bits_and2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and2.f b/gcc/testsuite/gfortran.dg/dec/bits_and2.f
 new file mode 100644
 index 0000000..53205a2
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_and2.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_and2.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10759,11 +10899,11 @@ index 0000000..53205a2
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and4.for b/gcc/testsuite/gfortran.dg/dec/bits_and4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and4.f b/gcc/testsuite/gfortran.dg/dec/bits_and4.f
 new file mode 100644
 index 0000000..968f85a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_and4.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_and4.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10794,11 +10934,11 @@ index 0000000..968f85a
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and8.for b/gcc/testsuite/gfortran.dg/dec/bits_and8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and8.f b/gcc/testsuite/gfortran.dg/dec/bits_and8.f
 new file mode 100644
 index 0000000..c5b9383
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_and8.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_and8.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10829,11 +10969,11 @@ index 0000000..c5b9383
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv1.for b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f
 new file mode 100644
 index 0000000..0e271f7
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10864,11 +11004,11 @@ index 0000000..0e271f7
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv2.for b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f
 new file mode 100644
 index 0000000..fc30234
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10899,11 +11039,11 @@ index 0000000..fc30234
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv4.for b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f
 new file mode 100644
 index 0000000..76802b8
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10934,11 +11074,11 @@ index 0000000..76802b8
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv8.for b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f
 new file mode 100644
 index 0000000..f9804cb
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -10969,11 +11109,11 @@ index 0000000..f9804cb
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv1.for b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f
 new file mode 100644
 index 0000000..9463ad3
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11004,11 +11144,11 @@ index 0000000..9463ad3
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv2.for b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f
 new file mode 100644
 index 0000000..cc0dca4
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11039,11 +11179,11 @@ index 0000000..cc0dca4
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv4.for b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f
 new file mode 100644
 index 0000000..e5eb3a7
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11074,11 +11214,11 @@ index 0000000..e5eb3a7
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv8.for b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f
 new file mode 100644
 index 0000000..1878e99
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11109,11 +11249,11 @@ index 0000000..1878e99
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not1.for b/gcc/testsuite/gfortran.dg/dec/bits_not1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not1.f b/gcc/testsuite/gfortran.dg/dec/bits_not1.f
 new file mode 100644
 index 0000000..4bd46a7
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_not1.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_not1.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11143,11 +11283,11 @@ index 0000000..4bd46a7
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not2.for b/gcc/testsuite/gfortran.dg/dec/bits_not2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not2.f b/gcc/testsuite/gfortran.dg/dec/bits_not2.f
 new file mode 100644
 index 0000000..11926d2
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_not2.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_not2.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11177,11 +11317,11 @@ index 0000000..11926d2
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not4.for b/gcc/testsuite/gfortran.dg/dec/bits_not4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not4.f b/gcc/testsuite/gfortran.dg/dec/bits_not4.f
 new file mode 100644
 index 0000000..13dc874
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_not4.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_not4.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11211,11 +11351,11 @@ index 0000000..13dc874
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not8.for b/gcc/testsuite/gfortran.dg/dec/bits_not8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not8.f b/gcc/testsuite/gfortran.dg/dec/bits_not8.f
 new file mode 100644
 index 0000000..6b498d8
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_not8.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_not8.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11245,11 +11385,11 @@ index 0000000..6b498d8
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or1.for b/gcc/testsuite/gfortran.dg/dec/bits_or1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or1.f b/gcc/testsuite/gfortran.dg/dec/bits_or1.f
 new file mode 100644
 index 0000000..83011c0
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_or1.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_or1.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11280,11 +11420,11 @@ index 0000000..83011c0
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or2.for b/gcc/testsuite/gfortran.dg/dec/bits_or2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or2.f b/gcc/testsuite/gfortran.dg/dec/bits_or2.f
 new file mode 100644
 index 0000000..027f570
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_or2.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_or2.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11315,11 +11455,11 @@ index 0000000..027f570
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or4.for b/gcc/testsuite/gfortran.dg/dec/bits_or4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or4.f b/gcc/testsuite/gfortran.dg/dec/bits_or4.f
 new file mode 100644
 index 0000000..01966c0
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_or4.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_or4.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11350,11 +11490,11 @@ index 0000000..01966c0
 +      ENDIF
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or8.for b/gcc/testsuite/gfortran.dg/dec/bits_or8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or8.f b/gcc/testsuite/gfortran.dg/dec/bits_or8.f
 new file mode 100644
 index 0000000..66feb6a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/bits_or8.for
++++ b/gcc/testsuite/gfortran.dg/dec/bits_or8.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-bitwise-ops" }
@@ -11486,11 +11626,11 @@ index 0000000..544b318
 +          call abort
 +        endif
 +      END
-diff --git a/gcc/testsuite/gfortran.dg/dec/cos.for b/gcc/testsuite/gfortran.dg/dec/cos.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/cos.f b/gcc/testsuite/gfortran.dg/dec/cos.f
 new file mode 100644
 index 0000000..dbb3f81
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cos.for
++++ b/gcc/testsuite/gfortran.dg/dec/cos.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -11522,11 +11662,11 @@ index 0000000..dbb3f81
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cosd.for b/gcc/testsuite/gfortran.dg/dec/cosd.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/cosd.f b/gcc/testsuite/gfortran.dg/dec/cosd.f
 new file mode 100644
 index 0000000..d7bded5
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cosd.for
++++ b/gcc/testsuite/gfortran.dg/dec/cosd.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -11558,11 +11698,11 @@ index 0000000..d7bded5
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cotan.for b/gcc/testsuite/gfortran.dg/dec/cotan.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/cotan.f b/gcc/testsuite/gfortran.dg/dec/cotan.f
 new file mode 100644
 index 0000000..e2ace4a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cotan.for
++++ b/gcc/testsuite/gfortran.dg/dec/cotan.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -11594,11 +11734,11 @@ index 0000000..e2ace4a
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cotand.for b/gcc/testsuite/gfortran.dg/dec/cotand.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/cotand.f b/gcc/testsuite/gfortran.dg/dec/cotand.f
 new file mode 100644
 index 0000000..d1824cc
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cotand.for
++++ b/gcc/testsuite/gfortran.dg/dec/cotand.f
 @@ -0,0 +1,32 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -11632,11 +11772,11 @@ index 0000000..d1824cc
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cray_assumed.for b/gcc/testsuite/gfortran.dg/dec/cray_assumed.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/cray_assumed.f b/gcc/testsuite/gfortran.dg/dec/cray_assumed.f
 new file mode 100644
 index 0000000..cffd04a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cray_assumed.for
++++ b/gcc/testsuite/gfortran.dg/dec/cray_assumed.f
 @@ -0,0 +1,15 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fcray-pointer" }
@@ -11653,66 +11793,6 @@ index 0000000..cffd04a
 +      pointer (y_ptr, y)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dec.exp b/gcc/testsuite/gfortran.dg/dec/dec.exp
-new file mode 100644
-index 0000000..790d6fe
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dec.exp
-@@ -0,0 +1,54 @@
-+# Copyright (C) 2011-2013 Free Software Foundation, Inc.
-+
-+# This program is free software; you can redistribute it and/or modify
-+# it under the terms of the GNU General Public License as published by
-+# the Free Software Foundation; either version 3 of the License, or
-+# (at your option) any later version.
-+#
-+# This program is distributed in the hope that it will be useful,
-+# but WITHOUT ANY WARRANTY; without even the implied warranty of
-+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+# GNU General Public License for more details.
-+#
-+# You should have received a copy of the GNU General Public License
-+# along with GCC; see the file COPYING3.  If not see
-+# <http://www.gnu.org/licenses/>.
-+#
-+# Contributed by Fritz Reese <Reese-Fritz@zai.com>
-+
-+
-+# Test DEC extensions.
-+#
-+# For some reason the usual drivers don't seem to grab dg-options from the
-+# tests here (read: "I don't know what I'm doing"). As a result the main loop
-+# tests each file individually, manually extracting the dg-options directive
-+# from the source file.
-+#
-+
-+load_lib gfortran-dg.exp
-+
-+dg-init
-+gfortran_init
-+
-+# Main loop.
-+foreach test [lsort [glob -nocomplain $srcdir/$subdir/*.for ] ] {
-+    set dg-final-code ""
-+    set flags ""
-+    set dowhat ""
-+    foreach directive [ dg-get-options $test ] {
-+      if [ string match "*dg-do*" $directive ] {
-+        regsub {dg-do [0-9]+ } $directive "" dowhat
-+        set dowhat [ string trim $dowhat ]
-+      }
-+      if [ string match "*dg-options*" $directive ] {
-+        regsub {dg-options [0-9]+ } $directive "" flags
-+        set flags [ string trim $flags {" "} ]
-+      }
-+    }
-+
-+    verbose "Testing $test, $flags"
-+    gfortran-dg-test $test $dowhat $flags
-+}
-+
-+gfortran_finish
-+dg-finish
 diff --git a/gcc/testsuite/gfortran.dg/dec/decl.inc b/gcc/testsuite/gfortran.dg/dec/decl.inc
 new file mode 100644
 index 0000000..7989896
@@ -11733,11 +11813,11 @@ index 0000000..7989896
 +      F_TOL = 5e-6_4
 +      D_TOL = 5e-6_8
 +      !Q_TOL = 5e-6_16
-diff --git a/gcc/testsuite/gfortran.dg/dec/dlines.for b/gcc/testsuite/gfortran.dg/dec/dlines.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dlines.f b/gcc/testsuite/gfortran.dg/dec/dlines.f
 new file mode 100644
 index 0000000..4134130
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dlines.for
++++ b/gcc/testsuite/gfortran.dg/dec/dlines.f
 @@ -0,0 +1,18 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec" }
@@ -11757,11 +11837,11 @@ index 0000000..4134130
 +      print *, a, b
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot1.for b/gcc/testsuite/gfortran.dg/dec/dot1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot1.f b/gcc/testsuite/gfortran.dg/dec/dot1.f
 new file mode 100644
 index 0000000..5094c2c
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot1.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot1.f
 @@ -0,0 +1,19 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11782,11 +11862,11 @@ index 0000000..5094c2c
 +        endif
 +
 +        end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot10.for b/gcc/testsuite/gfortran.dg/dec/dot10.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot10.f b/gcc/testsuite/gfortran.dg/dec/dot10.f
 new file mode 100644
 index 0000000..0f2b25a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot10.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot10.f
 @@ -0,0 +1,40 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11828,11 +11908,11 @@ index 0000000..0f2b25a
 +      endif
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot11.for b/gcc/testsuite/gfortran.dg/dec/dot11.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot11.f b/gcc/testsuite/gfortran.dg/dec/dot11.f
 new file mode 100644
 index 0000000..248f818
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot11.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot11.f
 @@ -0,0 +1,40 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11874,11 +11954,11 @@ index 0000000..248f818
 +      endif
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot12.for b/gcc/testsuite/gfortran.dg/dec/dot12.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot12.f b/gcc/testsuite/gfortran.dg/dec/dot12.f
 new file mode 100644
 index 0000000..395fc14
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot12.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot12.f
 @@ -0,0 +1,31 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11911,11 +11991,11 @@ index 0000000..395fc14
 +      endif
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot13.for b/gcc/testsuite/gfortran.dg/dec/dot13.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot13.f b/gcc/testsuite/gfortran.dg/dec/dot13.f
 new file mode 100644
 index 0000000..4642871
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot13.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot13.f
 @@ -0,0 +1,47 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11964,11 +12044,11 @@ index 0000000..4642871
 +      endif
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot2.for b/gcc/testsuite/gfortran.dg/dec/dot2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot2.f b/gcc/testsuite/gfortran.dg/dec/dot2.f
 new file mode 100644
 index 0000000..8f02f41
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot2.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot2.f
 @@ -0,0 +1,9 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -11979,11 +12059,11 @@ index 0000000..8f02f41
 +      LOGICAL :: AND
 +      AND = AND.AND.AND.AND.AND
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot3.for b/gcc/testsuite/gfortran.dg/dec/dot3.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot3.f b/gcc/testsuite/gfortran.dg/dec/dot3.f
 new file mode 100644
 index 0000000..a29b162
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot3.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot3.f
 @@ -0,0 +1,47 @@
 +! { dg-do run }
 +! { dg-options "-fdec-member-dot" }
@@ -12032,11 +12112,11 @@ index 0000000..a29b162
 +       call assertll ("(t2).eq.i", j, -8)
 +       
 +       end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot4.for b/gcc/testsuite/gfortran.dg/dec/dot4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot4.f b/gcc/testsuite/gfortran.dg/dec/dot4.f
 new file mode 100644
 index 0000000..2900565
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot4.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot4.f
 @@ -0,0 +1,17 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12055,11 +12135,11 @@ index 0000000..2900565
 +      call assert ("(b).eqv.c", (b).eqv.c)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot5.for b/gcc/testsuite/gfortran.dg/dec/dot5.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot5.f b/gcc/testsuite/gfortran.dg/dec/dot5.f
 new file mode 100644
 index 0000000..4297909
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot5.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot5.f
 @@ -0,0 +1,41 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12102,11 +12182,11 @@ index 0000000..4297909
 +       call assertll ("(t2).eq.i", j, -10)
 +
 +       end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot6.for b/gcc/testsuite/gfortran.dg/dec/dot6.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot6.f b/gcc/testsuite/gfortran.dg/dec/dot6.f
 new file mode 100644
 index 0000000..28ebb26
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot6.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot6.f
 @@ -0,0 +1,71 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12179,11 +12259,11 @@ index 0000000..28ebb26
 +      call assertll ("(t2).test.i", (t2).test.i, 6) ! (4) tstfunc(t2,i) = 6
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot7.for b/gcc/testsuite/gfortran.dg/dec/dot7.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot7.f b/gcc/testsuite/gfortran.dg/dec/dot7.f
 new file mode 100644
 index 0000000..8ef658c
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot7.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot7.f
 @@ -0,0 +1,52 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12237,11 +12317,11 @@ index 0000000..8ef658c
 +      call assertll ("(t2).eq.i", (t2).eq.i, 5) ! eq_func(t2,i) = 5
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot8.for b/gcc/testsuite/gfortran.dg/dec/dot8.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot8.f b/gcc/testsuite/gfortran.dg/dec/dot8.f
 new file mode 100644
 index 0000000..5efcd01
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot8.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot8.f
 @@ -0,0 +1,46 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12289,11 +12369,11 @@ index 0000000..5efcd01
 +      call assertll ("a%b%c%d%e%f%g%i", i, 1)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot9.for b/gcc/testsuite/gfortran.dg/dec/dot9.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot9.f b/gcc/testsuite/gfortran.dg/dec/dot9.f
 new file mode 100644
 index 0000000..40ffe53
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot9.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot9.f
 @@ -0,0 +1,47 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12342,11 +12422,11 @@ index 0000000..40ffe53
 +      call assertll ("a.b.c.d.e.f.g.i", i, 1)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad1.for b/gcc/testsuite/gfortran.dg/dec/dot_bad1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad1.f b/gcc/testsuite/gfortran.dg/dec/dot_bad1.f
 new file mode 100644
 index 0000000..35f7d7e
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot_bad1.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot_bad1.f
 @@ -0,0 +1,28 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12376,11 +12456,11 @@ index 0000000..35f7d7e
 +      print *, (t2).eq.i   ! { dg-error "Operands of comparison" }
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad2.for b/gcc/testsuite/gfortran.dg/dec/dot_bad2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad2.f b/gcc/testsuite/gfortran.dg/dec/dot_bad2.f
 new file mode 100644
 index 0000000..9e37600
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot_bad2.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot_bad2.f
 @@ -0,0 +1,11 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12393,11 +12473,11 @@ index 0000000..9e37600
 +      k = i.j ! { dg-error "Unclassifiable statement" }
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad3.for b/gcc/testsuite/gfortran.dg/dec/dot_bad3.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad3.f b/gcc/testsuite/gfortran.dg/dec/dot_bad3.f
 new file mode 100644
 index 0000000..1172fcd
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot_bad3.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot_bad3.f
 @@ -0,0 +1,10 @@
 +      ! { dg-do compile }
 +      !
@@ -12409,11 +12489,11 @@ index 0000000..1172fcd
 +      k = i.j ! { dg-error "Unclassifiable statement" }
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad4.for b/gcc/testsuite/gfortran.dg/dec/dot_bad4.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad4.f b/gcc/testsuite/gfortran.dg/dec/dot_bad4.f
 new file mode 100644
 index 0000000..e998f6d
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot_bad4.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot_bad4.f
 @@ -0,0 +1,18 @@
 +      ! { dg-do compile }
 +      !
@@ -12433,11 +12513,11 @@ index 0000000..e998f6d
 +      j = x%z ! { dg-error "is not a member of" }
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad5.for b/gcc/testsuite/gfortran.dg/dec/dot_bad5.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad5.f b/gcc/testsuite/gfortran.dg/dec/dot_bad5.f
 new file mode 100644
 index 0000000..9df0916
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/dot_bad5.for
++++ b/gcc/testsuite/gfortran.dg/dec/dot_bad5.f
 @@ -0,0 +1,20 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-member-dot" }
@@ -12494,11 +12574,11 @@ index 0000000..240186c
 +      !  diff = QABS(qa - qe)
 +      !  q_eqt = diff .lt. t
 +      !END
-diff --git a/gcc/testsuite/gfortran.dg/dec/exint_1.for b/gcc/testsuite/gfortran.dg/dec/exint_1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/exint_1.f b/gcc/testsuite/gfortran.dg/dec/exint_1.f
 new file mode 100644
-index 0000000..122e1a2
+index 0000000..8267536
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/exint_1.for
++++ b/gcc/testsuite/gfortran.dg/dec/exint_1.f
 @@ -0,0 +1,35 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-extended-int" }
@@ -12510,9 +12590,9 @@ index 0000000..122e1a2
 +      include 'assert.inc'
 +      program main
 +      implicit integer(a-z)
-+      integer(kind=2#100) I ! 100 base 2 => 4
-+      integer(5#13)       J ! 13  base 5 => 8
-+      integer*3#11     :: K ! { dg-error "Old-style.*INTEGER.3" }
++      integer*3#11        :: H ! { dg-error "Old-style.*INTEGER.3" }
++      integer(kind=2#100) I    ! 100 base 2 => 4
++      integer(5#13)       J, K ! 13  base 5 => 8
 +      I     = #3D + 2
 +      J     = 16 # 3f
 +      K     = 2 #  1000000 - 6   # 1 
@@ -12529,17 +12609,17 @@ index 0000000..122e1a2
 +      write (*,3#22) x'BEEF'! { dg-error "Syntax error" }
 +3#22  format (z8)           ! { dg-error "character in" }
 +      call assertll ("i", i,  63)
-+      call assertll ("j", j,  63)
++      call assertqq ("j", j,  63_8) ! J should have kind 8
 +      call assertqq ("k", k,  63_8) ! K should have kind 8
 +      call assertll ("l", l, -63)
 +      call assertll ("m", m,  63)
 +      call assertll ("n", n,  63)
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/float_noe.for b/gcc/testsuite/gfortran.dg/dec/float_noe.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/float_noe.f b/gcc/testsuite/gfortran.dg/dec/float_noe.f
 new file mode 100644
 index 0000000..c4c1cc5
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/float_noe.for
++++ b/gcc/testsuite/gfortran.dg/dec/float_noe.f
 @@ -0,0 +1,21 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-io" }
@@ -12562,11 +12642,11 @@ index 0000000..c4c1cc5
 +20    print *, "FAIL!!!!"
 +      call abort
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/init_default.for b/gcc/testsuite/gfortran.dg/dec/init_default.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/init_default.f b/gcc/testsuite/gfortran.dg/dec/init_default.f
 new file mode 100644
 index 0000000..6207177
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/init_default.for
++++ b/gcc/testsuite/gfortran.dg/dec/init_default.f
 @@ -0,0 +1,27 @@
 +      ! { dg-do run }
 +      ! { dg-options "-finit-local-zero -finit-derived" }
@@ -12595,11 +12675,11 @@ index 0000000..6207177
 +      call assertll ("nov_report%year", nov_report%year, 1996)
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/init_derived.for b/gcc/testsuite/gfortran.dg/dec/init_derived.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/init_derived.f b/gcc/testsuite/gfortran.dg/dec/init_derived.f
 new file mode 100644
 index 0000000..dcf1e69
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/init_derived.for
++++ b/gcc/testsuite/gfortran.dg/dec/init_derived.f
 @@ -0,0 +1,48 @@
 +      ! { dg-do run }
 +      ! { dg-options "-finit-local-zero -finit-derived" }
@@ -12649,11 +12729,11 @@ index 0000000..dcf1e69
 +      call assertll ("myfunc(0)", myfunc(0), 0)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/init_old.for b/gcc/testsuite/gfortran.dg/dec/init_old.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/init_old.f b/gcc/testsuite/gfortran.dg/dec/init_old.f
 new file mode 100644
 index 0000000..bd41477
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/init_old.for
++++ b/gcc/testsuite/gfortran.dg/dec/init_old.f
 @@ -0,0 +1,110 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -fno-range-check" }
@@ -12765,11 +12845,11 @@ index 0000000..bd41477
 +      call assert ( x, "x%p(2,2)", x%p(2,2), 4 )
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/init_old_bad.for b/gcc/testsuite/gfortran.dg/dec/init_old_bad.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/init_old_bad.f b/gcc/testsuite/gfortran.dg/dec/init_old_bad.f
 new file mode 100644
 index 0000000..4a6abd1
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/init_old_bad.for
++++ b/gcc/testsuite/gfortran.dg/dec/init_old_bad.f
 @@ -0,0 +1,19 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -12790,11 +12870,11 @@ index 0000000..4a6abd1
 +      END STRUCTURE
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccdef.for b/gcc/testsuite/gfortran.dg/dec/io_ccdef.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccdef.f b/gcc/testsuite/gfortran.dg/dec/io_ccdef.f
 new file mode 100644
 index 0000000..29c3891
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_ccdef.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_ccdef.f
 @@ -0,0 +1,53 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -12849,11 +12929,11 @@ index 0000000..29c3891
 +      close(unit=deffd)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccfort.for b/gcc/testsuite/gfortran.dg/dec/io_ccfort.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccfort.f b/gcc/testsuite/gfortran.dg/dec/io_ccfort.f
 new file mode 100644
 index 0000000..daf2d4c
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_ccfort.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_ccfort.f
 @@ -0,0 +1,54 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -12909,11 +12989,11 @@ index 0000000..daf2d4c
 +      close(unit=deffd)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_cclist.for b/gcc/testsuite/gfortran.dg/dec/io_cclist.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_cclist.f b/gcc/testsuite/gfortran.dg/dec/io_cclist.f
 new file mode 100644
 index 0000000..c0ab30e
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_cclist.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_cclist.f
 @@ -0,0 +1,54 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -12969,11 +13049,11 @@ index 0000000..c0ab30e
 +      close(unit=deffd)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccnone.for b/gcc/testsuite/gfortran.dg/dec/io_ccnone.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccnone.f b/gcc/testsuite/gfortran.dg/dec/io_ccnone.f
 new file mode 100644
 index 0000000..c31d289
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_ccnone.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_ccnone.f
 @@ -0,0 +1,55 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -13030,11 +13110,11 @@ index 0000000..c31d289
 +      close(unit=deffd)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_readonly.for b/gcc/testsuite/gfortran.dg/dec/io_readonly.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_readonly.f b/gcc/testsuite/gfortran.dg/dec/io_readonly.f
 new file mode 100644
 index 0000000..06fbea0
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_readonly.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_readonly.f
 @@ -0,0 +1,23 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -13059,11 +13139,11 @@ index 0000000..06fbea0
 +      close (unit=fd) !, status='delete') ! should cause runtime error/warning
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/io_shared.for b/gcc/testsuite/gfortran.dg/dec/io_shared.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/io_shared.f b/gcc/testsuite/gfortran.dg/dec/io_shared.f
 new file mode 100644
 index 0000000..b738e75
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/io_shared.for
++++ b/gcc/testsuite/gfortran.dg/dec/io_shared.f
 @@ -0,0 +1,18 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-io" }
@@ -13083,11 +13163,11 @@ index 0000000..b738e75
 +      open (unit=fd, file=fname, action='read', share='denyrw')
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.for b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f
 new file mode 100644
 index 0000000..a310e4d
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.for
++++ b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f
 @@ -0,0 +1,10 @@
 +! { dg-do compile }
 +! { dg-options "-ffeed -ffixed-form" }
@@ -13099,11 +13179,11 @@ index 0000000..a310e4d
 +      INTEGER*4 J
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_free.for b/gcc/testsuite/gfortran.dg/dec/linefeed_free.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_free.f b/gcc/testsuite/gfortran.dg/dec/linefeed_free.f
 new file mode 100644
 index 0000000..6dd8fa0
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/linefeed_free.for
++++ b/gcc/testsuite/gfortran.dg/dec/linefeed_free.f
 @@ -0,0 +1,10 @@
 +! { dg-do compile }
 +! { dg-options "-ffeed -ffree-form" }
@@ -13115,11 +13195,11 @@ index 0000000..6dd8fa0
 +INTEGER*4 J
 +
 +END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/loc_rval.for b/gcc/testsuite/gfortran.dg/dec/loc_rval.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/loc_rval.f b/gcc/testsuite/gfortran.dg/dec/loc_rval.f
 new file mode 100644
 index 0000000..2b8655e
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/loc_rval.for
++++ b/gcc/testsuite/gfortran.dg/dec/loc_rval.f
 @@ -0,0 +1,18 @@
 +      ! { dg-do run }
 +      ! { dg-options "-floc-rval" }
@@ -13337,11 +13417,11 @@ index 0000000..a65172d
 +8     format (z5,z5,z5)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/sin.for b/gcc/testsuite/gfortran.dg/dec/sin.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/sin.f b/gcc/testsuite/gfortran.dg/dec/sin.f
 new file mode 100644
 index 0000000..186a917
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/sin.for
++++ b/gcc/testsuite/gfortran.dg/dec/sin.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -13373,11 +13453,11 @@ index 0000000..186a917
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/sind.for b/gcc/testsuite/gfortran.dg/dec/sind.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/sind.f b/gcc/testsuite/gfortran.dg/dec/sind.f
 new file mode 100644
 index 0000000..415a817
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/sind.for
++++ b/gcc/testsuite/gfortran.dg/dec/sind.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -13409,11 +13489,11 @@ index 0000000..415a817
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/static_1.for b/gcc/testsuite/gfortran.dg/dec/static_1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/static_1.f b/gcc/testsuite/gfortran.dg/dec/static_1.f
 new file mode 100644
 index 0000000..85c4afa
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/static_1.for
++++ b/gcc/testsuite/gfortran.dg/dec/static_1.f
 @@ -0,0 +1,31 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-static -finit-local-zero" }
@@ -13446,12 +13526,12 @@ index 0000000..85c4afa
 +      call assertll ("f()", f(1,2), 3)
 +
 +      end
-diff --git a/gcc/testsuite/gfortran.dg/dec/static_2.for b/gcc/testsuite/gfortran.dg/dec/static_2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/static_2.f b/gcc/testsuite/gfortran.dg/dec/static_2.f
 new file mode 100644
-index 0000000..7e85983
+index 0000000..2da7d15
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/static_2.for
-@@ -0,0 +1,26 @@
++++ b/gcc/testsuite/gfortran.dg/dec/static_2.f
+@@ -0,0 +1,50 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-static -fno-automatic -finit-local-zero" }
 +      !
@@ -13461,28 +13541,52 @@ index 0000000..7e85983
 +      !
 +      include 'assert.inc'
 +
-+      function f (x, y)
-+        integer f, x, y, a      ! only a can actually be saved
-+        integer, automatic :: c ! { dg-warning "marked AUTOMATIC" }
-+        c = c + y ! should increment by y every time
-+        f = c
++      function f (x)
++      implicit none
++        integer f, x
++        integer, static :: a ! should be SAVEd
++        a = a + x ! should increment by x every time
++        f = a
 +        return
 +      endfunction
 +
++      recursive subroutine g (x)
 +      implicit none
++        integer x
++        integer, automatic :: a ! should be automatic (in recursive)
++        a = a + x ! should be set to x every time
++        call assertll ("g%a", a, x)
++      endsubroutine
++
++      subroutine h (x)
++      implicit none
++        integer x
++        integer, automatic :: a ! should be automatic (outside recursive)
++        a = a + x ! should be set to x every time
++        call assertll ("h%a", a, x)
++      endsubroutine
++
 +      integer f
 +
-+      ! Should return static value of a; accumulates x
-+      call assertll ("f()", f(1,3), 3)
-+      call assertll ("f()", f(1,4), 7)
-+      call assertll ("f()", f(1,2), 9)
++      ! Should return static value of c; accumulates x
++      call assertll ("f()", f(3), 3)
++      call assertll ("f()", f(4), 7)
++      call assertll ("f()", f(2), 9)
++
++      call g(3)
++      call g(4)
++      call g(2)
++
++      call h(3)
++      call h(4)
++      call h(2)
 +
 +      end
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_adhoc.for b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
 new file mode 100644
 index 0000000..f88abb7
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
 @@ -0,0 +1,71 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -13555,11 +13659,11 @@ index 0000000..f88abb7
 +     & tomorrow.app_memo(4).why, "fire")
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_anon.for b/gcc/testsuite/gfortran.dg/dec/struct_anon.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_anon.f b/gcc/testsuite/gfortran.dg/dec/struct_anon.f
 new file mode 100644
 index 0000000..9a80ebc
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_anon.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_anon.f
 @@ -0,0 +1,32 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -13593,11 +13697,11 @@ index 0000000..9a80ebc
 +      call assert   ("app_flag", tomorrow.app_flag)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_array.for b/gcc/testsuite/gfortran.dg/dec/struct_array.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_array.f b/gcc/testsuite/gfortran.dg/dec/struct_array.f
 new file mode 100644
 index 0000000..7304313
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_array.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_array.f
 @@ -0,0 +1,27 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -13626,11 +13730,11 @@ index 0000000..7304313
 +      call assertll ("array(3).y.z", i, 10)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_basic.for b/gcc/testsuite/gfortran.dg/dec/struct_basic.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_basic.f b/gcc/testsuite/gfortran.dg/dec/struct_basic.f
 new file mode 100644
 index 0000000..c8291b2
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_basic.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_basic.f
 @@ -0,0 +1,60 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -13692,11 +13796,11 @@ index 0000000..c8291b2
 +     & 1.2)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.for b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f
 new file mode 100644
 index 0000000..acb1bfe
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f
 @@ -0,0 +1,18 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -13716,11 +13820,11 @@ index 0000000..acb1bfe
 +      endtype
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.for b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f
 new file mode 100644
 index 0000000..2d4268c
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f
 @@ -0,0 +1,32 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -13754,11 +13858,11 @@ index 0000000..2d4268c
 +      call assertss ("[3]", y.buf(6), "3")
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_free.for b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f
 new file mode 100644
 index 0000000..b0c1a97
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f
 @@ -0,0 +1,32 @@
 +! { dg-do compile }
 +! { dg-options "-fdec-structure -ffree-form" }
@@ -13792,11 +13896,11 @@ index 0000000..b0c1a97
 +call assertss ("[3]", y.buf(6), "3")
 +
 +end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_comp.for b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f
 new file mode 100644
 index 0000000..d82bda7
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f
 @@ -0,0 +1,17 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -13815,11 +13919,11 @@ index 0000000..d82bda7
 +      end structure
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_share.for b/gcc/testsuite/gfortran.dg/dec/struct_name_share.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_share.f b/gcc/testsuite/gfortran.dg/dec/struct_name_share.f
 new file mode 100644
 index 0000000..7177a73
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_name_share.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_name_share.f
 @@ -0,0 +1,13 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -13834,11 +13938,11 @@ index 0000000..7177a73
 +      record /TY/ ty
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/struct_record.for b/gcc/testsuite/gfortran.dg/dec/struct_record.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/struct_record.f b/gcc/testsuite/gfortran.dg/dec/struct_record.f
 new file mode 100644
 index 0000000..6af87d4
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/struct_record.for
++++ b/gcc/testsuite/gfortran.dg/dec/struct_record.f
 @@ -0,0 +1,39 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -13879,11 +13983,11 @@ index 0000000..6af87d4
 +      call assertll ("mycar.year", mycar.year,  2013)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/tan.for b/gcc/testsuite/gfortran.dg/dec/tan.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/tan.f b/gcc/testsuite/gfortran.dg/dec/tan.f
 new file mode 100644
 index 0000000..3c855e4
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/tan.for
++++ b/gcc/testsuite/gfortran.dg/dec/tan.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -13915,11 +14019,11 @@ index 0000000..3c855e4
 +      include 'check.inc'
 +
 +      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/tand.for b/gcc/testsuite/gfortran.dg/dec/tand.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/tand.f b/gcc/testsuite/gfortran.dg/dec/tand.f
 new file mode 100644
 index 0000000..d5da7b2
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/tand.for
++++ b/gcc/testsuite/gfortran.dg/dec/tand.f
 @@ -0,0 +1,30 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-math" }
@@ -13993,11 +14097,11 @@ index 0000000..1277a08
 +        END UNION
 +        INTEGER*4 IT2
 +      END STRUCTURE
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic1.for b/gcc/testsuite/gfortran.dg/dec/union_basic1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic1.f b/gcc/testsuite/gfortran.dg/dec/union_basic1.f
 new file mode 100644
 index 0000000..b30ac72
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_basic1.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_basic1.f
 @@ -0,0 +1,27 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -14026,11 +14130,11 @@ index 0000000..b30ac72
 +      call assertll ("(int) 1.357e2", x.a, 1124578099)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic2.for b/gcc/testsuite/gfortran.dg/dec/union_basic2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic2.f b/gcc/testsuite/gfortran.dg/dec/union_basic2.f
 new file mode 100644
 index 0000000..1c366bf
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_basic2.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_basic2.f
 @@ -0,0 +1,34 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -14066,11 +14170,11 @@ index 0000000..1c366bf
 +      call assertii ("x.w2", x.w2, w2)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_compare.for b/gcc/testsuite/gfortran.dg/dec/union_compare.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_compare.f b/gcc/testsuite/gfortran.dg/dec/union_compare.f
 new file mode 100644
 index 0000000..4ea1e48
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_compare.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_compare.f
 @@ -0,0 +1,35 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -14107,11 +14211,11 @@ index 0000000..4ea1e48
 +      !CALL COMPARE (X, Y) ! should complain (?)
 +
 +      END PROGRAM
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_copy.for b/gcc/testsuite/gfortran.dg/dec/union_copy.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_copy.f b/gcc/testsuite/gfortran.dg/dec/union_copy.f
 new file mode 100644
 index 0000000..6429258
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_copy.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_copy.f
 @@ -0,0 +1,71 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure" }
@@ -14184,11 +14288,11 @@ index 0000000..6429258
 +      call assertll ("test2", y, 200211373) ! 0xbeefbad
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_dup.for b/gcc/testsuite/gfortran.dg/dec/union_dup.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_dup.f b/gcc/testsuite/gfortran.dg/dec/union_dup.f
 new file mode 100644
-index 0000000..d1ed249
+index 0000000..53cd8d9
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_dup.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_dup.f
 @@ -0,0 +1,39 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -14203,11 +14307,11 @@ index 0000000..d1ed249
 +        union
 +
 +          map
-+            integer x
++            integer x ! { dg-error "already declared" }
 +          end map
 +
 +          map
-+            integer y
++            integer y ! { dg-error "already declared" }
 +
 +            union 
 +
@@ -14218,7 +14322,7 @@ index 0000000..d1ed249
 +              map
 +                structure y ! { dg-error "already declared" }
 +                  integer*1 hour, minute 
-+                end structure  ! { dg-error }
++                end structure  ! { dg-error "Expecting END MAP" }
 +              end map
 +
 +            end union
@@ -14229,11 +14333,11 @@ index 0000000..d1ed249
 +      end structure
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_empty.for b/gcc/testsuite/gfortran.dg/dec/union_empty.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_empty.f b/gcc/testsuite/gfortran.dg/dec/union_empty.f
 new file mode 100644
 index 0000000..65abd0a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_empty.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_empty.f
 @@ -0,0 +1,17 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
@@ -14252,11 +14356,11 @@ index 0000000..65abd0a
 +      end structure
 +      end program main
 +
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_def.for b/gcc/testsuite/gfortran.dg/dec/union_init_def.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_def.f b/gcc/testsuite/gfortran.dg/dec/union_init_def.f
 new file mode 100644
 index 0000000..b5ce998
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_init_def.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_init_def.f
 @@ -0,0 +1,38 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -finit-local-zero -finit-derived" }
@@ -14296,11 +14400,11 @@ index 0000000..b5ce998
 +      call assertii ("x.w3", x.w3, 0_2)     ! untouched
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_exp.for b/gcc/testsuite/gfortran.dg/dec/union_init_exp.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_exp.f b/gcc/testsuite/gfortran.dg/dec/union_init_exp.f
 new file mode 100644
 index 0000000..21a9cd9
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_init_exp.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_init_exp.f
 @@ -0,0 +1,36 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -finit-derived -finit-local-zero" }
@@ -14338,12 +14442,12 @@ index 0000000..21a9cd9
 +      call assertii ("e", t.e, 0_2)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_overlap.for b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f
 new file mode 100644
-index 0000000..a0ff84e
+index 0000000..5c8c8ef
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.for
-@@ -0,0 +1,35 @@
++++ b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f
+@@ -0,0 +1,38 @@
 +      ! { dg-do compile }
 +      ! { dg-options "-fdec-structure" }
 +      !
@@ -14364,26 +14468,29 @@ index 0000000..a0ff84e
 +      structure /test/
 +      integer :: i = 8
 +      union
-+      map
++      map ! { dg-warning "overwritten by initializer" }
 +      integer*2 :: x = 1600
 +      integer*2 :: y = 1600
 +      end map
-+      map
-+      integer*4 :: z = 7777777 ! { dg-warning "overwritten by initializer" }
++      map ! { dg-warning "overwritten by initializer" }
++      integer*4 :: z = 7777777
 +      end map
-+      map
++      map ! { dg-warning "overwritten by initializer" }
 +      integer*4 a,b,c,d
-+      integer*2 :: e = 100 ! { dg-warning "overwritten by initializer" }
++      integer*2 :: e = 100
 +      end map
 +      end union
 +      end structure
 +
++      record /test/ t
++      print *, t.z
++
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested1.for b/gcc/testsuite/gfortran.dg/dec/union_nested1.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested1.f b/gcc/testsuite/gfortran.dg/dec/union_nested1.f
 new file mode 100644
 index 0000000..82a0b34
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_nested1.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_nested1.f
 @@ -0,0 +1,72 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -fno-range-check" }
@@ -14457,11 +14564,11 @@ index 0000000..82a0b34
 +      call assertll ("s.i", s.i, i)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested2.for b/gcc/testsuite/gfortran.dg/dec/union_nested2.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested2.f b/gcc/testsuite/gfortran.dg/dec/union_nested2.f
 new file mode 100644
 index 0000000..aca046d
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_nested2.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_nested2.f
 @@ -0,0 +1,80 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -fno-range-check" }
@@ -14543,11 +14650,11 @@ index 0000000..aca046d
 +      call assertbb (' al',  a.l,  al)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/union_ref.for b/gcc/testsuite/gfortran.dg/dec/union_ref.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/union_ref.f b/gcc/testsuite/gfortran.dg/dec/union_ref.f
 new file mode 100644
 index 0000000..d64502a
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/union_ref.for
++++ b/gcc/testsuite/gfortran.dg/dec/union_ref.f
 @@ -0,0 +1,29 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-structure -fno-range-check" }
@@ -14578,11 +14685,11 @@ index 0000000..d64502a
 +
 +      END PROGRAM MAIN
 +
-diff --git a/gcc/testsuite/gfortran.dg/dec/xor.for b/gcc/testsuite/gfortran.dg/dec/xor.for
+diff --git a/gcc/testsuite/gfortran.dg/dec/xor.f b/gcc/testsuite/gfortran.dg/dec/xor.f
 new file mode 100644
 index 0000000..ba25142
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/xor.for
++++ b/gcc/testsuite/gfortran.dg/dec/xor.f
 @@ -0,0 +1,27 @@
 +      ! { dg-do run }
 +      ! { dg-options "-fdec-logical-xor -ffixed-form" }
@@ -14611,6 +14718,21 @@ index 0000000..ba25142
 +11      enddo
 +10    enddo
 +      end program main
+diff --git a/gcc/testsuite/gfortran.dg/dg.exp b/gcc/testsuite/gfortran.dg/dg.exp
+index 795ac8e..e3dfdfc 100644
+--- a/gcc/testsuite/gfortran.dg/dg.exp
++++ b/gcc/testsuite/gfortran.dg/dg.exp
+@@ -29,6 +29,10 @@ if ![info exists DEFAULT_FFLAGS] then {
+ dg-init
+ 
+ # Main loop.
++
++gfortran-dg-runtest [lsort \
++       [glob -nocomplain $srcdir/$subdir/dec/*.\[fF\] ] ] $DEFAULT_FFLAGS
++
+ gfortran-dg-runtest [lsort \
+        [glob -nocomplain $srcdir/$subdir/*.\[fF\]{,90,95,03,08} ] ] $DEFAULT_FFLAGS
+ 
 diff --git a/gcc/testsuite/gfortran.dg/init_derived_1.f b/gcc/testsuite/gfortran.dg/init_derived_1.f
 new file mode 100644
 index 0000000..c187203

@@ -2,8 +2,8 @@
 %global gcc_version_full 4.8.3-for
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 4
-%global for_patch_version 0004
+%global gcc_release 5
+%global for_patch_version 0005
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
 %global _performance_build 1
@@ -281,7 +281,7 @@ Requires(preun): /sbin/install-info
 Autoreq: true
 
 %description -n %{program_prefix}gfortran
-The %{program_prefix}gfortran package provides support for compiling Fortran
+The %{program_prefix}gfortran package provides support for compiling DEC Fortran
 programs with the GNU Compiler Collection.
 
 %package -n libgfortran
