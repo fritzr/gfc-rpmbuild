@@ -1417,12 +1417,6 @@ if [ %{_lib} = lib64 ]; then
   rmdir %{buildroot}%{_prefix}/lib64
 fi
 
-# Make ld.so config file pointing to where we install the libs (FULLPATH)
-mkdir -p %{buildroot}/etc/ld.so.conf.d
-cat > %{buildroot}/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf << \EOF
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-EOF
-
 %check
 cd obj-%{gcc_target_platform}
 
@@ -1830,7 +1824,6 @@ fi
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s*.so*
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 %doc gcc/COPYING* COPYING.RUNTIME
 
 %files c++
@@ -1881,7 +1874,6 @@ fi
 %dir %{_prefix}/share/gcc-%{gcc_version_full}
 %dir %{_prefix}/share/gcc-%{gcc_version_full}/python
 %{_prefix}/share/gcc-%{gcc_version_full}/python/libstdcxx
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 
 %files -n libstdc++-devel
 %defattr(-,root,root,-)
@@ -1972,7 +1964,6 @@ fi
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgfortran.so.3*
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 
 %files -n libgfortran-static
 %defattr(-,root,root,-)
@@ -1999,7 +1990,6 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgomp.so.1*
 %{_infodir}/%{program_prefix}libgomp.info*
 %doc rpm.doc/changelogs/libgomp/ChangeLog*
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 
 %files -n libmudflap
 %defattr(-,root,root,-)
@@ -2008,7 +1998,6 @@ fi
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflap.so.0*
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflapth.so.0*
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 
 %files -n libmudflap-devel
 %defattr(-,root,root,-)
@@ -2054,7 +2043,6 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libquadmath.so.0*
 %{_infodir}/%{program_prefix}libquadmath.info*
 %doc rpm.doc/libquadmath/COPYING*
-/etc/ld.so.conf.d/gfc-%{gcc_version_full}-%{gcc_release}%{?dist}.%{_arch}.conf
 
 %files -n libquadmath-devel
 %defattr(-,root,root,-)
