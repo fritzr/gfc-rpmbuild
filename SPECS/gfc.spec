@@ -56,7 +56,7 @@
 %global multilib_32_arch i686
 %endif
 Summary: Various compilers (C, C++, Objective-C, Java, ...)
-Name: gfc
+Name: %{program_prefix}gcc
 Version: %{gcc_version}
 Release: %{gcc_release}%{?dist}
 # libgcc, libgfortran, libmudflap, libgomp, libstdc++ and crtstuff have
@@ -120,7 +120,7 @@ BuildRequires: libunwind >= 0.98
 BuildRequires: doxygen >= 1.7.1
 BuildRequires: graphviz, dblatex, texlive-collection-latex, docbook5-style-xsl
 %endif
-Requires: cpp = %{version}-%{release}
+Requires: %{program_prefix}cpp = %{version}-%{release}
 # Need .eh_frame ld optimizations
 # Need proper visibility support
 # Need -pie support
@@ -206,15 +206,15 @@ Autoreq: false
 This package contains GCC shared support library which is needed
 e.g. for exception handling support.
 
-%package c++
+%package -n %{program_prefix}c++
 Summary: C++ support for GCC
 Group: Development/Languages
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 Requires: libstdc++ = %{version}-%{release}
 Requires: libstdc++-devel = %{version}-%{release}
 Autoreq: true
 
-%description c++
+%description -n %{program_prefix}c++
 This package adds C++ support to the GNU Compiler Collection.
 It includes support for most of the current C++ specification,
 including templates and exception handling.
@@ -258,10 +258,10 @@ Autoreq: true
 Manual, doxygen generated API information and Frequently Asked Questions
 for the GNU standard C++ library.
 
-%package gfortran
+%package -n %{program_prefix}gfortran
 Summary: Fortran support
 Group: Development/Languages
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 Requires: libgfortran = %{version}-%{release}
 %if %{build_libquadmath}
 Requires: libquadmath = %{version}-%{release}
@@ -280,8 +280,8 @@ Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Autoreq: true
 
-%description gfortran
-The gfc-gfortran package provides support for compiling Fortran
+%description -n %{program_prefix}gfortran
+The %{program_prefix}gfortran package provides support for compiling Fortran
 programs with the GNU Compiler Collection.
 
 %package -n libgfortran
@@ -300,7 +300,7 @@ Fortran dynamically linked programs.
 Summary: Static Fortran libraries
 Group: Development/Libraries
 Requires: libgfortran = %{version}-%{release}
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 %if %{build_libquadmath}
 Requires: libquadmath-static = %{version}-%{release}
 %endif
@@ -330,7 +330,7 @@ for mudflap support.
 Summary: GCC mudflap support
 Group: Development/Libraries
 Requires: libmudflap = %{version}-%{release}
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 
 %description -n libmudflap-devel
 This package contains headers for building mudflap-instrumented programs.
@@ -362,7 +362,7 @@ for __float128 math support and for Fortran REAL*16 support.
 Summary: GCC __float128 support
 Group: Development/Libraries
 Requires: libquadmath = %{version}-%{release}
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 
 %description -n libquadmath-devel
 This package contains headers for building Fortran programs using
@@ -391,7 +391,7 @@ which is a GCC transactional memory support runtime library.
 Summary: The GNU Transactional Memory support
 Group: Development/Libraries
 Requires: libitm = %{version}-%{release}
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 
 %description -n libitm-devel
 This package contains headers and support files for the
@@ -460,16 +460,14 @@ Requires: libtsan = %{version}-%{release}
 %description -n libtsan-static
 This package contains Thread Sanitizer static runtime library.
 
-%package -n cpp
+%package -n %{program_prefix}cpp
 Summary: The C Preprocessor
 Group: Development/Languages
-#Requires: filesystem >= 3
-Provides: /lib/cpp
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Autoreq: true
 
-%description -n cpp
+%description -n %{program_prefix}cpp
 Cpp is the GNU C-Compatible Compiler Preprocessor.
 Cpp is a macro processor which is used automatically
 by the C compiler to transform your program before actual
@@ -494,7 +492,7 @@ macros.
 %package plugin-devel
 Summary: Support for compiling GCC plugins
 Group: Development/Languages
-Requires: gfc = %{version}-%{release}
+Requires: %{program_prefix}gcc = %{version}-%{release}
 Requires: gmp-devel >= 4.1.2-8, mpfr-devel >= 2.2.1, libmpc-devel >= 0.8.1
 
 %description plugin-devel
@@ -514,7 +512,7 @@ not stable, so plugins must be rebuilt any time GCC is updated.
 Summary: Debug information for package %{name}
 Group: Development/Debug
 AutoReqProv: 0
-Requires: gfc-base-debuginfo = %{version}-%{release}
+Requires: %{program_prefix}base-debuginfo = %{version}-%{release}
 
 %description debuginfo
 This package provides debug information for package %{name}.
@@ -995,7 +993,7 @@ ln -sf %{program_prefix}gfortran %{buildroot}%{_prefix}/bin/%{program_prefix}f95
 rm -f %{buildroot}%{_infodir}/dir
 gzip -9 %{buildroot}%{_infodir}/*.info*
 
-# Rename info docs to gfc-*
+# Rename info docs to prefix*
 for dir in %{buildroot}%{_infodir} %{buildroot}%{_datadir}/locale/*/LC_MESSAGES;
 do
   cd $dir
@@ -1408,7 +1406,7 @@ rm -f %{buildroot}/lib64/libgcc_s*.so*
 rm -f %{buildroot}%{mandir}/man3/ffi*
 
 # Help plugins find out nvra.
-echo gfc-%{gcc_version_full}-%{release}.%{_arch} > $FULLPATH/rpmver
+echo %{program_prefix}%{gcc_version_full}-%{release}.%{_arch} > $FULLPATH/rpmver
 
 # Move lib64 stuff so it doesn't conflict with another gcc install
 # This overwrites the links to /lib64 and /usr/lib64 but nothing else :)
@@ -1453,25 +1451,25 @@ if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}gcc.info.gz ]; then
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gcc.info.gz || :
 fi
 
-%post -n cpp
+%post -n %{program_prefix}cpp
 if [ -f %{_infodir}/%{program_prefix}cpp.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}cpp.info.gz || :
 fi
 
-%preun -n cpp
+%preun -n %{program_prefix}cpp
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}cpp.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}cpp.info.gz || :
 fi
 
-%post gfortran
+%post -n %{program_prefix}gfortran
 if [ -f %{_infodir}/%{program_prefix}gfortran.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gfortran.info.gz || :
 fi
 
-%preun gfortran
+%preun -n %{program_prefix}gfortran
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}gfortran.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gfortran.info.gz || :
@@ -1807,7 +1805,7 @@ fi
 %{_prefix}/libexec/getconf/default
 %doc gcc/README* rpm.doc/changelogs/gcc/ChangeLog* gcc/COPYING* COPYING.RUNTIME
 
-%files -n cpp -f %{program_prefix}cpplib.lang
+%files -n %{program_prefix}cpp -f %{program_prefix}cpplib.lang
 %defattr(-,root,root,-)
 %{_prefix}/lib/%{program_prefix}cpp
 %{_prefix}/bin/%{program_prefix}cpp
@@ -1826,7 +1824,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s*.so*
 %doc gcc/COPYING* COPYING.RUNTIME
 
-%files c++
+%files -n %{program_prefix}c++
 %defattr(-,root,root,-)
 %{_prefix}/bin/%{gcc_target_platform}-*++
 %{_prefix}/bin/%{program_prefix}g++
@@ -1917,7 +1915,7 @@ fi
 %doc rpm.doc/libstdc++-v3/html
 %endif
 
-%files gfortran
+%files -n %{program_prefix}gfortran
 %defattr(-,root,root,-)
 %{_prefix}/bin/%{program_prefix}gfortran
 %{_prefix}/bin/%{program_prefix}f95
