@@ -7,9 +7,10 @@ About this repository
 For instructions on building RPMs for `gfc-gfortran` see below.
 For additional help, you may find it helpful to consult the [Fedora RPM Guide](http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html).
 
-Suitable RPMs for RHEL6-based systems are currently in development. When they
-are functional, the RPMs themselves will be released and can be used to easily
-install `gfc-gfortran`.
+For releases of the binary RPMs produced by this process, as well as
+instructions on installing and using the compilers with the resulting RPMs,
+see the
+[gfc-rpms repository](http://repo.rincon.com:5000/M50/gfc-rpms).
 
 Dependencies
 ============
@@ -56,53 +57,9 @@ rpmbuild -bb SPECS/gfc-gcc.spec
 ```
 
 After a few hours you will find some RPMs in the `RPMS/$(uname -i)`
-subdirectory.  You only need `gfc-gfortran`, `gfc-gcc`, `gfc-c++`, and their
-dependencies `gfc-cpp`, `libgfortran`, `libgcc`, `libgomp`, `libquadmath`,
-`libquadmath-devel`, `libstdc++`, and `libstdc++-devel`.
+subdirectory. 
 
-Installing the RPMs
-===================
-Install pieces of this package with the following commands:
-
-```bash
-# Install gfc-gcc
-rpm -i libgcc*.rpm \
-    -i libgomp*.rpm \
-    -i gfc-cpp*.rpm \
-    -i gfc-gcc*.rpm
-
-# Install gfc-gfortran
-rpm -i libquadmath*.rpm \
-    -i libquadmath-devel*.rpm \
-    -i libgfortran*.rpm \
-    -i gfc-gfortran*.rpm 
-
-# Install gfc-g++
-rpm -i libstdc++-devel*.rpm \
-    -i libstdc++*.rpm \
-    -i gfc-c++*.rpm 
-```
-
-Usage
-=====
-To allow installation side-by-side with your system gcc, these RPMs place the
-libraries in a special place (`/usr/lib/gcc/4.8.3-for/<arch>/`). The compiler
-collection is built to look here for supporting libraries, but executables
-built by these compilers will not know to look there for runtime support.
-Therefore you have two options:
-
- * Add `-Wl,-rpath,/usr/lib/gcc/4.8.3-for/<arch>/` to LFLAGS when linking
-   (done automatically in Midas 5.0 when configured for the GFC compilers)
-
- * Set your `LD_LIBRARY_PATH` to point to `/usr/lib/gcc/4.8.3-for/<arch>/`
-   before /lib[64]/ and /usr/lib[64]/
-
-The first option is preferred, as it tells the executable where to look without
-bashing your system configuration.
-
-The second option will override the default system libraries, which you should
-only do if you know what you're doing.
-
-Note that in either case you will need to replace `<arch>` with the actual
-directory present in that location for your machine (for example, x86_64 RHEL
-machines tend to use something like `x86_64-redhat-linux`).
+For releases of the binary RPMs produced by this process, as well as
+instructions on installing and using the compilers with the resulting RPMs,
+see the
+[gfc-rpms repository](http://repo.rincon.com:5000/M50/gfc-rpms).
