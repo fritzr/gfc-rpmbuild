@@ -93,7 +93,7 @@ BuildRequires: binutils >= 2.20.51.0.2
 # While gcc doesn't include statically linked binaries, during testing
 # -static is used several times.
 #BuildRequires: glibc-static
-BuildRequires: sharutils
+#BuildRequires: sharutils
 BuildRequires: zlib-devel, gettext, dejagnu, bison, flex 
 #BuildRequires: texinfo, texinfo-tex, /usr/bin/pod2man
 #BuildRequires: systemtap-sdt-devel >= 1.3
@@ -969,6 +969,8 @@ make -C %{gcc_target_platform}/libstdc++-v3
 
 make prefix=%{buildroot}%{_prefix} mandir=%{buildroot}%{_mandir} \
   infodir=%{buildroot}%{_infodir} install
+make prefix=%{buildroot}%{_prefix} mandir=%{buildroot}%{_mandir} \
+  infodir=%{buildroot}%{_infodir} install-info
 
 FULLPATH=%{buildroot}%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 FULLEPATH=%{buildroot}%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}
