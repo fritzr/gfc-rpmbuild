@@ -20,7 +20,6 @@ for glibc-devel must also be installed.
 
 ```
 rpm-build
-sharutils
 glibc-devel
 ```
 
