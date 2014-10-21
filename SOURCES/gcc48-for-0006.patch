@@ -3102,7 +3102,7 @@ index 4f9008d..4c5a3f2 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 725cd8a..7e8486e 100644
+index 725cd8a..33fe1ae 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
 @@ -383,19 +383,125 @@ gfc_match_end_interface (void)
@@ -3393,23 +3393,29 @@ index 725cd8a..7e8486e 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2513,8 +2616,13 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
- 	  return 0;
+@@ -2466,6 +2569,12 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+       if (f->sym == NULL && a->expr == NULL)
+ 	goto match;
+ 
++      /* With -Wno-arglist-types, ignore mismatches with arglist funcs. */
++      if (!gfc_option.warn_arglist_types && a->name
++          && (   strncmp (a->name, "%VAL", 4) == 0
++              || strncmp (a->name, "%LOC", 4) == 0))
++        goto match;
++
+       if (f->sym == NULL)
+ 	{
+ 	  if (where)
+@@ -2514,7 +2623,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
--      if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
+       if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
 -			      is_elemental, where))
-+      
-+      /* With -Wno-arglist-types, ignore type mismatches with arglist funcs. */
-+      if ((gfc_option.warn_arglist_types || (a->name
-+              && (   strncmp (a->name, "%VAL", 4) != 0
-+                  && strncmp (a->name, "%LOC", 4) != 0)))
-+          && !compare_parameter (f->sym, a->expr, ranks_must_agree,
-+                                 is_elemental, where))
++                              is_elemental, where))
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3436,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3437,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
