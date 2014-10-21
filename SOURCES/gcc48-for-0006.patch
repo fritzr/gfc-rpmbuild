@@ -1,3 +1,140 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..26115b5
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,131 @@
++Open source fortran compiler for Midas
++======================================
++This repository contains source code for `gfc-gfortran`, a modified version
++of `gfortran`, the open source GNU Fortran Compiler. This version of the
++compiler supports all the DEC extensions used in the old Fortran code present
++in the Midas baseline. With `gfc-gfortran` you can build Midas for free!
++
++About this repository
++=====================
++The contents of this repository only contain _changes_ to the gcc source code
++starting from the gcc-4.8.3 release. Version 4.8.3 is modern and will
++be the default compiler shipped with RHEL 7 and Fedora 20. To build this
++version of the compiler you need to independently acquire the gcc source code
++(described below).
++
++This version of gcc is maintained by Fritz Reese <Reese-Fritz@zai.com>. Contact
++him with any questions, problems, or bugs you encounter. In the future,
++these changes will hopefully be included in the gcc baseline and maintained by
++GNU.
++
++Installing the compiler
++=======================
++Soon binary RPMs will be released (targeted for RHEL 6+) which will enable
++trivial installation of `gfc-gfortran` and related components. Until these are
++available, you must build the compiler from scratch (see below).
++
++Building the compiler from scratch
++==================================
++Building this version of the compiler is just like building any version of gcc.
++If you need additional guidance check out the GNU page on
++[Installing GCC: Building](https://gcc.gnu.org/install/build.html). GCC has a
++few dependencies, including:
++```
++glibc-devel
++libgmp-devel
++libmpfr-devel
++libmpc-devel
++```
++If you wish to build for 32-bit compatibility, you must also install the 32-bit
++compatibility package for glibc-devel (i.e. `glibc-devel.i686` on x86_64).
++
++We will assume you have created three directories which this section will
++refer to as `$GCCSRC`, `$GCCDST`, and `$GCCBLD`. These directories will be used
++to contain the compiler sources, temporary build files, and the resulting
++executables and libraries, respectively.
++
++First fetch the original sources from the gcc-4.8.3 release:
++```bash
++wget -O /tmp/gcc-4.8.3.tar.bz2 ftp://gcc.gnu.org/pub/gcc/releases/gcc-4.8.3/gcc-4.8.3.tar.bz2
++bzip2 -cd /tmp/gcc-4.8.3.tar.bz2 | tar --strip-components=1 -C $GCCSRC -xf -
++```
++(Note: The gcc sources are large (~80MB); if you find the download too slow,
++you should try one of the [GNU mirror sites](http://www.gnu.org/prep/ftp.html).
++Just replace [ftp://gcc.gnu.org/pub] with the URL of a site near you.)
++
++Then simply configure gcc to build the fortran compiler into your `$GCCDST`.
++If you do not have the 32-bit glibc-devel compatibility package installed,
++either install it or add `--disable-multilib` to the configure line.
++
++```bash
++cd $GCCBLD
++$GCCSRC/configure --prefix=$GCCDST --enable-languages=c,c++,fortran --program-prefix=gfc-
++make && make install
++```
++
++As a last step, you will need to update your `PATH` and `LD_LIBRARY_PATH` to
++allow your system to locate the new compiler and supporting libraries. 
++
++With bash, include something like the following in `~/.bashrc`:
++```bash
++export PATH="$GCCDST/bin:$PATH"
++export LD_LIBRARY_PATH="$GCCDST/lib64:$GCCDST/lib:$LD_LIBRARY_PATH"
++```
++
++With tcsh, include something like the following in `~/.tcshrc`:
++```bash
++setenv PATH "$GCCDST/bin":"$PATH"
++setenv LD_LIBRARY_PATH "$GCCDST/lib64":"$GCCDST/lib":"$LD_LIBRARY_PATH"
++```
++
++Congratulations, you can now compile really really really old Fortran code with
++`gfc-gfortran`!
++
++Documentation on new compile flags and DEC extension support can be found by
++placing `$GCCDST/share/man` in `MANPATH` (similar to `PATH` and
++`LD_LIBRARY_PATH`) and running `man gfc-gfortran`. More complete HTML
++documentation is available if you build it:
++
++```bash
++cd $GCCBLD
++make html && make install-html
++firefox $GCCDST/share/doc/gfortran/Optional-DEC-extension-support.html
++```
++
++Using the compiler
++==================
++Midas 5.0 supports the version of gfortran, gcc and g++ built from the sources
++in this repository. Midas 5.0 is configured to allow the following compilers:
++```
++XM_FORTRAN=gfc-gfortran
++XM_CC=gfc-gcc
++XM_CXX=gfc-g++
++```
++
++By default (for compatibility) this version of the compiler does not interpret
++Fortran code much differently than stock gfortran 4.8.3. Nearly all DEC
++extension support is enabled with the compile-time flag `-fdec`. Midas 5.0
++has been tested with the following flags, which should be in
++`$XMDISK/xm/cfg/build_flags.cfg`:
++
++`fortran: -fPIC -fdec -finit-local-zero -finit-derived -fdollar-ok -fcray-pointer -ffixed-line-length-132`
++
++If you run into any problems using this version of gfortran with Midas 5.0+
++that you do not encounter with another compiler, please contact Fritz Reese
++<Reese-Fritz@zai.com>.
++
++COPYRIGHT
++=========
++This set of modifications to the GNU Fortran compiler is released under the GNU
++General Public License version 3, published at
++[http://www.gnu.org/licenses/](http://www.gnu.org/licenses/).
++
++I, Fritz Reese, hereby disclaim all copyright interest in my changes and
++enhancements to the GNU Compiler Collection.
++
++I affirm that I have no other intellectual property interest that would
++undermine this release. I represent that these changes and enhancements are my
++own and not a copy of someone else's work.
++
++Fritz Reese
++September 15, 2014
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
 index 44c59c7..3b040c3 100644
 --- a/gcc/fortran/ChangeLog
@@ -2084,7 +2221,7 @@ index 2772932..369d245 100644
  
  	    case EXEC_CLOSE:
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index bd1aeb9..698598c 100644
+index bd1aeb9..79ad12c 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -49,7 +49,18 @@ along with GCC; see the file COPYING3.  If not see
@@ -2199,7 +2336,15 @@ index bd1aeb9..698598c 100644
    gfc_st_label *err;
  }
  gfc_open;
-@@ -2290,6 +2316,7 @@ typedef struct
+@@ -2256,6 +2282,7 @@ typedef struct
+   int warn_realloc_lhs_all;
+   int warn_compare_reals;
+   int warn_target_lifetime;
++  int warn_arglist_types;
+   int max_errors;
+ 
+   int flag_all_intrinsics;
+@@ -2290,6 +2317,7 @@ typedef struct
    int flag_module_private;
    int flag_recursive;
    int flag_init_local_zero;
@@ -2207,7 +2352,7 @@ index bd1aeb9..698598c 100644
    int flag_init_integer;
    int flag_init_integer_value;
    int flag_init_real;
-@@ -2302,6 +2329,17 @@ typedef struct
+@@ -2302,6 +2330,17 @@ typedef struct
    int flag_realloc_lhs;
    int flag_aggressive_function_elimination;
    int flag_frontend_optimize;
@@ -2225,7 +2370,7 @@ index bd1aeb9..698598c 100644
  
    int fpe;
    int rtcheck;
-@@ -2523,6 +2561,7 @@ gfc_try gfc_check_any_c_kind (gfc_typespec *);
+@@ -2523,6 +2562,7 @@ gfc_try gfc_check_any_c_kind (gfc_typespec *);
  int gfc_validate_kind (bt, int, bool);
  int gfc_get_int_kind_from_width_isofortranenv (int size);
  int gfc_get_real_kind_from_width_isofortranenv (int size);
@@ -2233,7 +2378,7 @@ index bd1aeb9..698598c 100644
  tree gfc_get_derived_type (gfc_symbol * derived);
  extern int gfc_index_integer_kind;
  extern int gfc_default_integer_kind;
-@@ -2568,6 +2607,7 @@ gfc_try gfc_add_cray_pointee (symbol_attribute *, locus *);
+@@ -2568,6 +2608,7 @@ gfc_try gfc_add_cray_pointee (symbol_attribute *, locus *);
  match gfc_mod_pointee_as (gfc_array_spec *);
  gfc_try gfc_add_protected (symbol_attribute *, const char *, locus *);
  gfc_try gfc_add_result (symbol_attribute *, const char *, locus *);
@@ -2241,7 +2386,7 @@ index bd1aeb9..698598c 100644
  gfc_try gfc_add_save (symbol_attribute *, save_state, const char *, locus *);
  gfc_try gfc_add_threadprivate (symbol_attribute *, const char *, locus *);
  gfc_try gfc_add_saved_common (symbol_attribute *, locus *);
-@@ -2610,7 +2650,8 @@ gfc_try gfc_copy_attr (symbol_attribute *, symbol_attribute *, locus *);
+@@ -2610,7 +2651,8 @@ gfc_try gfc_copy_attr (symbol_attribute *, symbol_attribute *, locus *);
  gfc_try gfc_add_component (gfc_symbol *, const char *, gfc_component **);
  gfc_symbol *gfc_use_derived (gfc_symbol *);
  gfc_symtree *gfc_use_derived_tree (gfc_symtree *);
@@ -2251,7 +2396,7 @@ index bd1aeb9..698598c 100644
  
  gfc_st_label *gfc_get_st_label (int);
  void gfc_free_st_label (gfc_st_label *);
-@@ -2785,7 +2826,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
+@@ -2785,7 +2827,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
  gfc_try gfc_check_assign_symbol (gfc_symbol *, gfc_component *, gfc_expr *);
  
  bool gfc_has_default_initializer (gfc_symbol *);
@@ -2262,7 +2407,7 @@ index bd1aeb9..698598c 100644
  gfc_expr *gfc_get_variable_expr (gfc_symtree *);
  void gfc_add_full_array_ref (gfc_expr *, gfc_array_spec *);
  gfc_expr * gfc_lval_expr_from_sym (gfc_symbol *);
-@@ -2879,6 +2922,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
+@@ -2879,6 +2923,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
  
  /* interface.c -- FIXME: some of these should be in symbol.c */
  void gfc_free_interface (gfc_interface *);
@@ -2270,7 +2415,7 @@ index bd1aeb9..698598c 100644
  int gfc_compare_derived_types (gfc_symbol *, gfc_symbol *);
  int gfc_compare_types (gfc_typespec *, gfc_typespec *);
  int gfc_compare_interfaces (gfc_symbol*, gfc_symbol*, const char *, int, int,
-@@ -2924,6 +2968,8 @@ void gfc_module_done_2 (void);
+@@ -2924,6 +2969,8 @@ void gfc_module_done_2 (void);
  void gfc_dump_module (const char *, int);
  bool gfc_check_symbol_access (gfc_symbol *);
  void gfc_free_use_stmts (gfc_use_list *);
@@ -2280,7 +2425,7 @@ index bd1aeb9..698598c 100644
  /* primary.c */
  symbol_attribute gfc_variable_attr (gfc_expr *, gfc_typespec *);
 diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
-index 4f9008d..613b5af 100644
+index 4f9008d..4c5a3f2 100644
 --- a/gcc/fortran/gfortran.texi
 +++ b/gcc/fortran/gfortran.texi
 @@ -473,9 +473,9 @@ The GNU Fortran compiler is able to compile nearly all
@@ -2460,7 +2605,7 @@ index 4f9008d..613b5af 100644
  Here is an example of code using the non portable record structure syntax:
  
  @example
-@@ -2073,15 +2110,484 @@ store_catalog(12) = pear
+@@ -2073,15 +2110,487 @@ store_catalog(12) = pear
  print *, store_catalog(12)
  @end example
  
@@ -2638,10 +2783,10 @@ index 4f9008d..613b5af 100644
 +With @option{-fdec-logical-xor}, @code{.XOR.} is supported as a logical
 +operator. It is entirely equivalent to the standard operator @code{.NEQV.}:
 +
-+@smallexample
++@example
 +logical :: a = .true., b = .false., c
 +c = a .xor. b ! same as a .neqv. b
-+@end smallexample
++@end example
 +
 +@node Base#value literal constants
 +@subsubsection Base#value literal constants
@@ -2653,23 +2798,23 @@ index 4f9008d..613b5af 100644
 +for bases higher than base ten. In the following example, each assignment
 +results in the value 63:
 +
-+@smallexample
++@example
 +I = #3D + 2
 +J = 16#3f
 +K = 2#1000000 - 6#1
 +L = -4#3 + 5#231
 +M = '3f'x
 +N = 36#1R
-+@end smallexample
++@end example
 +
 +Extended integer literals of this form are also supported in standard variable
 +kind specifications (not old-style):
 +
-+@smallexample
++@example
 +integer(kind=2#100) I ! valid: 100 base 2 => 4
 +integer(5#13)       J ! valid: 13  base 5 => 8
 +integer*3#11        K ! UNSUPPORTED
-+@end smallexample
++@end example
 +
 +@node I/O specifiers
 +@subsubsection I/O specifiers
@@ -2800,35 +2945,35 @@ index 4f9008d..613b5af 100644
 +in @ref{Intrinsic Procedures}. The complete list of currently supported
 +intrinsics is here:
 +
-+@multitable .2 .2 .2 .2 .2
++@multitable @columnfractions .2 .2 .2 .2 .2
 +
 +@headitem Intrinsic @tab B @tab I @tab J @tab K
 +
-+@item @code{ABS}
++@item @code{@ref{ABS}}
 +  @tab @code{BABS} @tab @code{IIABS} @tab @code{JIABS} @tab @code{KIABS}
-+@item @code{BTEST}
++@item @code{@ref{BTEST}}
 +  @tab @code{BBTEST} @tab @code{BITEST} @tab @code{BJTEST} @tab @code{BKTEST}
-+@item @code{IAND}
++@item @code{@ref{IAND}}
 +  @tab @code{BIAND} @tab @code{IIAND} @tab @code{JIAND} @tab @code{KIAND}
-+@item @code{IBCLR}
++@item @code{@ref{IBCLR}}
 +  @tab @code{BBCLR} @tab @code{IIBCLR} @tab @code{JIBCLR} @tab @code{KIBCLR}
-+@item @code{IBITS}
++@item @code{@ref{IBITS}}
 +  @tab @code{BBITS} @tab @code{IIBITS} @tab @code{JIBITS} @tab @code{KIBITS}
-+@item @code{IBSET}
++@item @code{@ref{IBSET}}
 +  @tab @code{BBSET} @tab @code{IIBSET} @tab @code{JIBSET} @tab @code{KIBSET}
-+@item @code{IEOR}
++@item @code{@ref{IEOR}}
 +  @tab @code{BIEOR} @tab @code{IIEOR} @tab @code{JIEOR} @tab @code{KIEOR}
-+@item @code{IOR}
++@item @code{@ref{IOR}}
 +  @tab @code{BIOR} @tab @code{IIOR} @tab @code{JIOR} @tab @code{KIOR}
-+@item @code{ISHFT}
++@item @code{@ref{ISHFT}}
 +  @tab @code{BSHFT} @tab @code{IISHFT} @tab @code{JISHFT} @tab @code{KISHFT}
-+@item @code{ISHFTC}
++@item @code{@ref{ISHFTC}}
 +  @tab @code{BSHFTC} @tab @code{IISHFTC} @tab @code{JISHFTC} @tab @code{KISHFTC}
-+@item @code{MOD}
++@item @code{@ref{MOD}}
 +  @tab @code{BMOD} @tab @code{IMOD} @tab @code{JMOD} @tab @code{KMOD}
-+@item @code{NOT}
++@item @code{@ref{NOT}}
 +  @tab @code{BNOT} @tab @code{INOT} @tab @code{JNOT} @tab @code{KNOT}
-+@item @code{FLOAT}
++@item @code{@ref{REAL}}
 +  @tab @code{--} @tab @code{FLOATI} @tab @code{FLOATJ} @tab @code{FLOATK}
 +@end multitable
 +
@@ -2848,16 +2993,16 @@ index 4f9008d..613b5af 100644
 +instead of radians. The new intrinsics enabled by this option are listed here
 +with the corresponding standard radian versions:
 +
-+@multitable .5 .5
++@multitable @columnfractions .5 .5
 +@headitem Radians @tab Degrees
-+@item @ref{ACOS}  @tab @ref{ACOSD}
-+@item @ref{ASIN}  @tab @ref{ASIND}
-+@item @ref{ATAN}  @tab @ref{ATAND}
-+@item @ref{ATAN2} @tab @ref{ATAN2D}
-+@item @ref{COS}   @tab @ref{COSD}
-+@item @ref{COTAN} @tab @ref{COTAND}
-+@item @ref{SIN}   @tab @ref{SIND}
-+@item @ref{TAN}   @tab @ref{TAND}
++@item @code{@ref{ACOS}}  @tab @code{@ref{ACOSD}}
++@item @code{@ref{ASIN}}  @tab @code{@ref{ASIND}}
++@item @code{@ref{ATAN}}  @tab @code{@ref{ATAND}}
++@item @code{@ref{ATAN2}} @tab @code{@ref{ATAN2D}}
++@item @code{@ref{COS}}   @tab @code{@ref{COSD}}
++@item @code{@ref{COTAN}} @tab @code{@ref{COTAND}}
++@item @code{@ref{SIN}}   @tab @code{@ref{SIND}}
++@item @code{@ref{TAN}}   @tab @code{@ref{TAND}}
 +@end multitable
 +
 +@node AUTOMATIC and STATIC attributes
@@ -2905,14 +3050,17 @@ index 4f9008d..613b5af 100644
 +  integer a, b, c, d
 +  automatic :: a
 +  ! a is automatic; b, c, and d are static
-+ensubroutine
++endsubroutine
 +@end example
 +
 +@node Form feed as whitespace
 +@subsubsection Form feed as whitespace
 +@cindex form feed
 +
-+Stuff.
++Historically, DEC allowed insertion of form feed characters ('\f', ASCII 0x0C)
++at the beginning of lines for nice output to line printers. GNU Fortran
++supports the interpretation of form feed characters in source as whitespace
++with @option{-ffeed}.
 +
  
 -@c @node UNION and MAP
@@ -2954,7 +3102,7 @@ index 4f9008d..613b5af 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 725cd8a..7a1193e 100644
+index 725cd8a..7e8486e 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
 @@ -383,19 +383,125 @@ gfc_match_end_interface (void)
@@ -3245,7 +3393,23 @@ index 725cd8a..7a1193e 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -3328,7 +3431,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -2513,8 +2616,13 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+ 	  return 0;
+ 	}
+ 
+-      if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
+-			      is_elemental, where))
++      
++      /* With -Wno-arglist-types, ignore type mismatches with arglist funcs. */
++      if ((gfc_option.warn_arglist_types || (a->name
++              && (   strncmp (a->name, "%VAL", 4) != 0
++                  && strncmp (a->name, "%LOC", 4) != 0)))
++          && !compare_parameter (f->sym, a->expr, ranks_must_agree,
++                                 is_elemental, where))
+ 	return 0;
+ 
+       /* TS 29113, 6.3p2.  */
+@@ -3328,7 +3436,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
@@ -3857,7 +4021,7 @@ index 5d50285..3a77d98 100644
  gfc_expr *gfc_simplify_ubound (gfc_expr *, gfc_expr *, gfc_expr *);
  gfc_expr *gfc_simplify_ucobound (gfc_expr *, gfc_expr *, gfc_expr *);
 diff --git a/gcc/fortran/intrinsic.texi b/gcc/fortran/intrinsic.texi
-index 1e31e4f..b34dcea 100644
+index 1e31e4f..1e134ca 100644
 --- a/gcc/fortran/intrinsic.texi
 +++ b/gcc/fortran/intrinsic.texi
 @@ -23,6 +23,9 @@ Some basic guidelines for editing this document:
@@ -3919,7 +4083,33 @@ index 1e31e4f..b34dcea 100644
  * @code{TANH}:          TANH,      Hyperbolic tangent function
  * @code{THIS_IMAGE}:    THIS_IMAGE, Cosubscript index of this image
  * @code{TIME}:          TIME,      Time function
-@@ -596,6 +608,62 @@ end program test_acos
+@@ -384,6 +396,10 @@ end program test_abort
+ @fnindex CABS
+ @fnindex DABS
+ @fnindex IABS
++@fnindex BABS
++@fnindex IIABS
++@fnindex JIABS
++@fnindex KIABS
+ @fnindex ZABS
+ @fnindex CDABS
+ @cindex absolute value
+@@ -433,6 +449,14 @@ end program test_abs
+ @item @code{IABS(A)}  @tab @code{INTEGER(4) A} @tab @code{INTEGER(4)} @tab Fortran 77 and later
+ @item @code{ZABS(A)}  @tab @code{COMPLEX(8) A} @tab @code{COMPLEX(8)} @tab GNU extension
+ @item @code{CDABS(A)} @tab @code{COMPLEX(8) A} @tab @code{COMPLEX(8)} @tab GNU extension
++@item @code{BABS(A)}  @tab @code{INTEGER(1) A} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIABS(A)}  @tab @code{INTEGER(2) A} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIABS(A)}  @tab @code{INTEGER(4) A} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIABS(A)}  @tab @code{INTEGER(8) A} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
+ @end multitable
+ @end table
+ 
+@@ -596,6 +620,62 @@ end program test_acos
  
  @item @emph{See also}:
  Inverse function: @ref{COS}
@@ -3982,7 +4172,7 @@ index 1e31e4f..b34dcea 100644
  
  @end table
  
-@@ -1246,6 +1314,62 @@ end program test_asin
+@@ -1246,6 +1326,62 @@ end program test_asin
  
  @item @emph{See also}:
  Inverse function: @ref{SIN}
@@ -4045,7 +4235,7 @@ index 1e31e4f..b34dcea 100644
  
  @end table
  
-@@ -1435,6 +1559,63 @@ end program test_atan
+@@ -1435,6 +1571,63 @@ end program test_atan
  
  @item @emph{See also}:
  Inverse function: @ref{TAN}
@@ -4109,7 +4299,7 @@ index 1e31e4f..b34dcea 100644
  
  @end table
  
-@@ -1495,6 +1676,75 @@ end program test_atan2
+@@ -1495,6 +1688,75 @@ end program test_atan2
  @item @code{ATAN2(X, Y)}  @tab @code{REAL(4) X, Y} @tab @code{REAL(4)} @tab Fortran 77 and later
  @item @code{DATAN2(X, Y)} @tab @code{REAL(8) X, Y} @tab @code{REAL(8)} @tab Fortran 77 and later
  @end multitable
@@ -4185,7 +4375,40 @@ index 1e31e4f..b34dcea 100644
  @end table
  
  
-@@ -3096,6 +3346,61 @@ end program test_cos
+@@ -2183,6 +2445,10 @@ The return value is of type @code{LOGICAL} and of the default kind.
+ @node BTEST
+ @section @code{BTEST} --- Bit test function
+ @fnindex BTEST
++@fnindex BBTEST
++@fnindex BITEST
++@fnindex BJTEST
++@fnindex BKTEST
+ @cindex bits, testing
+ 
+ @table @asis
+@@ -2220,6 +2486,21 @@ program test_btest
+     end do
+ end program test_btest
+ @end smallexample
++
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{BTEST} @tab @code{INTEGER I} @tab @code{INTEGER(4)}
++  @tab Fortran 77 and later
++@item @code{BBTEST} @tab @code{INTEGER(1) I} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{BITEST} @tab @code{INTEGER(2) I} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{BJTEST} @tab @code{INTEGER(4) I} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{BKTEST} @tab @code{INTEGER(8) I} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
+ @end table
+ 
+ 
+@@ -3096,6 +3377,61 @@ end program test_cos
  
  @item @emph{See also}:
  Inverse function: @ref{ACOS}
@@ -4247,7 +4470,7 @@ index 1e31e4f..b34dcea 100644
  
  @end table
  
-@@ -3155,6 +3460,109 @@ Inverse function: @ref{ACOSH}
+@@ -3155,6 +3491,109 @@ Inverse function: @ref{ACOSH}
  
  
  
@@ -4357,7 +4580,233 @@ index 1e31e4f..b34dcea 100644
  @node COUNT
  @section @code{COUNT} --- Count function
  @fnindex COUNT
-@@ -11414,7 +11822,64 @@ end program test_sin
+@@ -6183,6 +6622,21 @@ PROGRAM test_iand
+ END PROGRAM
+ @end smallexample
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IAND(I,J)} @tab @code{INTEGER I,J} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BIAND(I,J)} @tab @code{INTEGER(1) I,J} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIAND(I,J)} @tab @code{INTEGER(2) I,J} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIAND(I,J)} @tab @code{INTEGER(4) I,J} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIAND(I,J)} @tab @code{INTEGER(8) I,J} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IOR}, @ref{IEOR}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
+ 
+@@ -6324,6 +6778,21 @@ Elemental function
+ The return value is of type @code{INTEGER} and of the same kind as
+ @var{I}.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IBCLR} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BBCLR} @tab @code{INTEGER(1) I} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIBCLR} @tab @code{INTEGER(2) I} @tab @code{INTEGER}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIBCLR} @tab @code{INTEGER(4) I} @tab @code{INTEGER}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIBCLR} @tab @code{INTEGER(8) I} @tab @code{INTEGER}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IBITS}, @ref{IBSET}, @ref{IAND}, @ref{IOR}, @ref{IEOR}, @ref{MVBITS}
+ 
+@@ -6365,6 +6834,21 @@ Elemental function
+ The return value is of type @code{INTEGER} and of the same kind as
+ @var{I}.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IBITS} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BBITS} @tab @code{INTEGER(1) I} 
++  @tab @code{INTEGER(1)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIBITS} @tab @code{INTEGER(2) I}
++  @tab @code{INTEGER(2)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIBITS} @tab @code{INTEGER(4) I} 
++  @tab @code{INTEGER(4)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIBITS} @tab @code{INTEGER(8) I} 
++  @tab @code{INTEGER(8)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{BIT_SIZE}, @ref{IBCLR}, @ref{IBSET}, @ref{IAND}, @ref{IOR}, @ref{IEOR}
+ @end table
+@@ -6400,6 +6884,21 @@ Elemental function
+ The return value is of type @code{INTEGER} and of the same kind as
+ @var{I}.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IBSET} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BBSET} @tab @code{INTEGER(1) I} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIBSET} @tab @code{INTEGER(2) I} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIBSET} @tab @code{INTEGER(4) I} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIBSET} @tab @code{INTEGER(8) I} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IBCLR}, @ref{IBITS}, @ref{IAND}, @ref{IOR}, @ref{IEOR}, @ref{MVBITS}
+ 
+@@ -6561,6 +7060,21 @@ The return type is @code{INTEGER}, of the same kind as the
+ arguments.  (If the argument kinds differ, it is of the same kind as
+ the larger argument.)
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IEOR(I,J)} @tab @code{INTEGER I,J} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BIEOR(I,J)} @tab @code{INTEGER(1) I,J} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIEOR(I,J)} @tab @code{INTEGER(2) I,J} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIEOR(I,J)} @tab @code{INTEGER(4) I,J} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIEOR(I,J)} @tab @code{INTEGER(8) I,J} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IOR}, @ref{IAND}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
+ @end table
+@@ -6864,6 +7378,21 @@ The return type is @code{INTEGER}, of the same kind as the
+ arguments.  (If the argument kinds differ, it is of the same kind as
+ the larger argument.)
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{IOR(I,J)} @tab @code{INTEGER I,J} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BIOR(I,J)} @tab @code{INTEGER(1) I,J} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IIOR(I,J)} @tab @code{INTEGER(2) I,J} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JIOR(I,J)} @tab @code{INTEGER(4) I,J} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KIOR(I,J)} @tab @code{INTEGER(8) I,J} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IEOR}, @ref{IAND}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
+ @end table
+@@ -7148,6 +7677,21 @@ Elemental function
+ The return value is of type @code{INTEGER} and of the same kind as
+ @var{I}.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{ISHFT} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BSHFT} @tab @code{INTEGER(1) I} 
++  @tab @code{INTEGER(1)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IISHFT} @tab @code{INTEGER(2) I} 
++  @tab @code{INTEGER(2)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JISHFT} @tab @code{INTEGER(4) I} 
++  @tab @code{INTEGER(4)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KISHFT} @tab @code{INTEGER(8) I}
++  @tab @code{INTEGER(8)} @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{ISHFTC}
+ @end table
+@@ -7192,6 +7736,21 @@ the value must be greater than zero and less than or equal to
+ The return value is of type @code{INTEGER} and of the same kind as
+ @var{I}.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{ISHFTC(I)} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BSHFTC} @tab @code{INTEGER(1) I} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IISHFTC} @tab @code{INTEGER(2) I} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JISHFTC} @tab @code{INTEGER(4) I} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KISHFTC} @tab @code{INTEGER(8) I} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{ISHFT}
+ @end table
+@@ -9070,6 +9629,14 @@ end program test_mod
+ @item @code{MOD(A,P)}  @tab @code{INTEGER A,P} @tab @code{INTEGER} @tab Fortran 95 and later
+ @item @code{AMOD(A,P)} @tab @code{REAL(4) A,P} @tab @code{REAL(4)} @tab Fortran 95 and later
+ @item @code{DMOD(A,P)} @tab @code{REAL(8) A,P} @tab @code{REAL(8)} @tab Fortran 95 and later
++@item @code{BMOD(A,P)} @tab @code{INTEGER(1) A,P} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{IMOD(A,P)} @tab @code{INTEGER(2) A,P} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JMOD(A,P)} @tab @code{INTEGER(4) A,P} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KMOD(A,P)} @tab @code{INTEGER(8) A,P} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
+ @end multitable
+ 
+ @item @emph{See also}:
+@@ -9448,6 +10015,21 @@ Elemental function
+ The return type is @code{INTEGER}, of the same kind as the
+ argument.
+ 
++@item @emph{Specific names}:
++@multitable @columnfractions .20 .20 .20 .25
++@item Name            @tab Argument            @tab Return type       @tab Standard
++@item @code{NOT(I)} @tab @code{INTEGER I} @tab @code{INTEGER}
++  @tab Fortran 77 and later
++@item @code{BNOT(I)} @tab @code{INTEGER(1) I} @tab @code{INTEGER(1)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{INOT(I)} @tab @code{INTEGER(2) I} @tab @code{INTEGER(2)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{JNOT(I)} @tab @code{INTEGER(4) I} @tab @code{INTEGER(4)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{KNOT(I)} @tab @code{INTEGER(8) I} @tab @code{INTEGER(8)}
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@end multitable
++
+ @item @emph{See also}:
+ @ref{IAND}, @ref{IEOR}, @ref{IOR}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}
+ 
+@@ -10411,6 +10993,12 @@ end program test_real
+ @item @code{FLOAT(A)}  @tab @code{INTEGER(4)}  @tab @code{REAL(4)}  @tab Fortran 77 and later
+ @item @code{DFLOAT(A)} @tab @code{INTEGER(4)}  @tab @code{REAL(8)}  @tab GNU extension
+ @item @code{SNGL(A)}   @tab @code{INTEGER(8)}  @tab @code{REAL(4)}  @tab Fortran 77 and later
++@item @code{FLOATI(A)}   @tab @code{INTEGER(2)}  @tab @code{REAL(4)} 
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{FLOATJ(A)}   @tab @code{INTEGER(4)}  @tab @code{REAL(4)} 
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
++@item @code{FLOATK(A)}   @tab @code{INTEGER(8)}  @tab @code{REAL(4)} 
++  @tab GNU extension (enabled with -fdec-intrinsic-ints)
+ @end multitable
+ 
+ 
+@@ -11414,7 +12002,64 @@ end program test_sin
  @end multitable
  
  @item @emph{See also}:
@@ -4423,7 +4872,7 @@ index 1e31e4f..b34dcea 100644
  @end table
  
  
-@@ -12177,7 +12642,59 @@ end program test_tan
+@@ -12177,7 +12822,59 @@ end program test_tan
  @end multitable
  
  @item @emph{See also}:
@@ -4485,7 +4934,7 @@ index 1e31e4f..b34dcea 100644
  
  
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index b0b43d8..6828d8c 100644
+index b0b43d8..54ba4b7 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -115,13 +115,17 @@ by type.  Explanations are in the following sections.
@@ -4513,7 +4962,17 @@ index b0b43d8..6828d8c 100644
  }
  
  @item Preprocessing Options
-@@ -178,6 +182,7 @@ and warnings}.
+@@ -145,7 +149,8 @@ and warnings}.
+ -Wimplicit-procedure -Wintrinsic-shadow -Wintrinsics-std @gol
+ -Wline-truncation -Wno-align-commons -Wno-tabs -Wreal-q-constant @gol
+ -Wsurprising -Wunderflow -Wunused-parameter -Wrealloc-lhs Wrealloc-lhs-all @gol
+--Wtarget-lifetime -fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
++-Wtarget-lifetime -Warglist-types @gol
++-fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
+ }
+ 
+ @item Debugging Options
+@@ -178,6 +183,7 @@ and warnings}.
  -finit-character=@var{n} -finit-integer=@var{n} -finit-local-zero @gol
  -finit-logical=@var{<true|false>}
  -finit-real=@var{<zero|inf|-inf|nan|snan>} @gol
@@ -4521,7 +4980,7 @@ index b0b43d8..6828d8c 100644
  -fmax-array-constructor=@var{n} -fmax-stack-var-size=@var{n}
  -fno-align-commons @gol
  -fno-automatic -fno-protect-parens -fno-underscoring -fno-whole-file @gol
-@@ -227,6 +232,72 @@ given they are treated as if the first column contained a blank.  If the
+@@ -227,6 +233,72 @@ given they are treated as if the first column contained a blank.  If the
  @option{-fd-lines-as-comments} option is given, they are treated as
  comment lines.
  
@@ -4594,7 +5053,7 @@ index b0b43d8..6828d8c 100644
  @item -fdefault-double-8
  @opindex @code{fdefault-double-8}
  Set the @code{DOUBLE PRECISION} type to an 8 byte wide type.  If
-@@ -309,6 +380,11 @@ lines in the source file. The default value is 132.
+@@ -309,6 +381,11 @@ lines in the source file. The default value is 132.
  @option{-ffree-line-length-0} means the same thing as
  @option{-ffree-line-length-none}.
  
@@ -4606,7 +5065,29 @@ index b0b43d8..6828d8c 100644
  @item -fmax-identifier-length=@var{n}
  @opindex @code{fmax-identifier-length=}@var{n}
  Specify the maximum allowed identifier length. Typical values are
-@@ -1518,11 +1594,13 @@ on the stack. This flag cannot be used together with
+@@ -728,7 +805,7 @@ This currently includes @option{-Waliasing}, @option{-Wampersand},
+ @option{-Wconversion}, @option{-Wsurprising}, @option{-Wc-binding-type},
+ @option{-Wintrinsics-std}, @option{-Wno-tabs}, @option{-Wintrinsic-shadow},
+ @option{-Wline-truncation}, @option{-Wtarget-lifetime},
+-@option{-Wreal-q-constant} and @option{-Wunused}.
++@option{-Warglist-types}, @option{-Wreal-q-constant} and @option{-Wunused}.
+ 
+ @item -Waliasing
+ @opindex @code{Waliasing}
+@@ -954,6 +1031,12 @@ This option is implied by @option{-Wextra}.
+ Warn if the pointer in a pointer assignment might be longer than the its
+ target. This option is implied by @option{-Wall}.
+ 
++@item -Warglist-types
++@opindex @code{Warglist-types}
++Disabling this prevents warnings when the argument list functions %val() or
++%loc() cause a type mismatch between formal/actual arguments in a function
++call. Enabled by default. This option is implied by @option{-Wall}.
++
+ @item -Werror
+ @opindex @code{Werror}
+ @cindex warnings, to errors
+@@ -1518,11 +1601,13 @@ on the stack. This flag cannot be used together with
  @option{-fmax-stack-var-size=} or @option{-fno-automatic}.
  
  @item -finit-local-zero
@@ -4620,7 +5101,7 @@ index b0b43d8..6828d8c 100644
  @opindex @code{finit-integer}
  @opindex @code{finit-real}
  @opindex @code{finit-logical}
-@@ -1537,7 +1615,7 @@ initialization options are provided by the
+@@ -1537,7 +1622,7 @@ initialization options are provided by the
  the real and imaginary parts of local @code{COMPLEX} variables),
  @option{-finit-logical=@var{<true|false>}}, and
  @option{-finit-character=@var{n}} (where @var{n} is an ASCII character
@@ -4629,7 +5110,7 @@ index b0b43d8..6828d8c 100644
  @itemize @bullet
  @item
  allocatable arrays
-@@ -1546,7 +1624,8 @@ components of derived type variables
+@@ -1546,7 +1631,8 @@ components of derived type variables
  @item
  variables that appear in an @code{EQUIVALENCE} statement.
  @end itemize
@@ -4851,10 +5332,21 @@ index 2499c90..42f5649 100644
  IOPARM (close,   status,	1 << 7,  char1)
  IOPARM (filepos, common,	0,	 common)
 diff --git a/gcc/fortran/lang.opt b/gcc/fortran/lang.opt
-index fbe8a1b..0fbca87 100644
+index fbe8a1b..430cfbe 100644
 --- a/gcc/fortran/lang.opt
 +++ b/gcc/fortran/lang.opt
-@@ -373,6 +373,46 @@ fd-lines-as-comments
+@@ -205,6 +205,10 @@ Wampersand
+ Fortran Warning
+ Warn about missing ampersand in continued character constants
+ 
++Warglist-types
++Fortran Warning
++Warn about type mismatches for %loc() or %val() as actual arguments
++
+ Warray-temporaries
+ Fortran Warning
+ Warn about creation of array temporaries
+@@ -373,6 +377,46 @@ fd-lines-as-comments
  Fortran RejectNegative
  Treat lines with 'D' in column one as comments
  
@@ -4901,7 +5393,7 @@ index fbe8a1b..0fbca87 100644
  fdefault-double-8
  Fortran
  Set the default double precision kind to an 8 byte wide type
-@@ -413,6 +453,10 @@ ff2c
+@@ -413,6 +457,10 @@ ff2c
  Fortran
  Use f2c calling convention
  
@@ -4912,7 +5404,7 @@ index fbe8a1b..0fbca87 100644
  ffixed-form
  Fortran RejectNegative
  Assume that the source file is fixed form
-@@ -481,6 +525,14 @@ finit-real=
+@@ -481,6 +529,14 @@ finit-real=
  Fortran RejectNegative Joined
  -finit-real=<zero|nan|inf|-inf>	Initialize local real variables
  
@@ -5572,7 +6064,7 @@ index c267ee7..1acb997 100644
    dt_sym = tmp_symtree->n.sym;
    dt_sym->name = gfc_get_string (sym->name);
 diff --git a/gcc/fortran/options.c b/gcc/fortran/options.c
-index fba1a3f..9ce5102 100644
+index fba1a3f..2605331 100644
 --- a/gcc/fortran/options.c
 +++ b/gcc/fortran/options.c
 @@ -51,6 +51,25 @@ set_default_std_flags (void)
@@ -5601,7 +6093,15 @@ index fba1a3f..9ce5102 100644
  
  /* Return language mask for Fortran options.  */
  
-@@ -155,6 +174,7 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -113,6 +132,7 @@ gfc_init_options (unsigned int decoded_options_count,
+   gfc_option.warn_realloc_lhs_all = 0;
+   gfc_option.warn_compare_reals = 0;
+   gfc_option.warn_target_lifetime = 0;
++  gfc_option.warn_arglist_types = 1;
+   gfc_option.max_errors = 25;
+ 
+   gfc_option.flag_all_intrinsics = 0;
+@@ -155,6 +175,7 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.flag_init_logical = GFC_INIT_LOGICAL_OFF;
    gfc_option.flag_init_character = GFC_INIT_CHARACTER_OFF;
    gfc_option.flag_init_character_value = (char)0;
@@ -5609,7 +6109,7 @@ index fba1a3f..9ce5102 100644
    gfc_option.flag_align_commons = 1;
    gfc_option.flag_protect_parens = -1;
    gfc_option.flag_realloc_lhs = -1;
-@@ -165,6 +185,9 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -165,6 +186,9 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.rtcheck = 0;
    gfc_option.coarray = GFC_FCOARRAY_NONE;
  
@@ -5619,7 +6119,26 @@ index fba1a3f..9ce5102 100644
    set_default_std_flags ();
  
    /* Initialize cpp-related options.  */
-@@ -942,6 +965,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -474,6 +498,7 @@ set_Wall (int setting)
+   gfc_option.warn_real_q_constant = setting;
+   gfc_option.warn_unused_dummy_argument = setting;
+   gfc_option.warn_target_lifetime = setting;
++  gfc_option.warn_arglist_types = setting;
+ 
+   warn_return_type = setting;
+   warn_uninitialized = setting;
+@@ -726,6 +751,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+       gfc_option.warn_unused_dummy_argument = value;
+       break;
+ 
++    case OPT_Warglist_types:
++      gfc_option.warn_arglist_types = value;
++      break;
++
+     case OPT_fall_intrinsics:
+       gfc_option.flag_all_intrinsics = 1;
+       break;
+@@ -942,6 +971,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.flag_init_character_value = (char)0;
        break;
  
@@ -5630,7 +6149,7 @@ index fba1a3f..9ce5102 100644
      case OPT_finit_logical_:
        if (!strcasecmp (arg, "false"))
  	gfc_option.flag_init_logical = GFC_INIT_LOGICAL_FALSE;
-@@ -1119,6 +1146,55 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -1119,6 +1152,55 @@ gfc_handle_option (size_t scode, const char *arg, int value,
      case OPT_fcoarray_:
        gfc_handle_coarray_option (arg);
        break;
@@ -9025,7 +9544,7 @@ index 7c21f22..804a96b 100644
  {
    gfc_expr *result;
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 1b3702f..704a509 100644
+index 1b3702f..05ff6d5 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -40,6 +40,7 @@ const mstring flavors[] =
@@ -9142,36 +9661,20 @@ index 1b3702f..704a509 100644
  /************** Component name management ************/
  
  /* Component names of a derived type form their own little namespaces
-@@ -1854,22 +1878,27 @@ gfc_add_component (gfc_symbol *sym, const char *name,
+@@ -1854,6 +1878,11 @@ gfc_add_component (gfc_symbol *sym, const char *name,
  {
    gfc_component *p, *tail;
  
--  tail = NULL;
--
 +  /* Check for existing components with the same name, but not for union
 +     components or containers. Unions and maps are anonymous so they have
 +     unique internal names which will never conflict.
 +     Don't use gfc_find_component here because it calls gfc_use_derived,
 +     but the derived type may not be fully defined yet. */
-   for (p = sym->components; p; p = p->next)
-     {
-       if (strcmp (p->name, name) == 0)
--	{
--	  gfc_error ("Component '%s' at %C already declared at %L",
--		     name, &p->loc);
--	  return FAILURE;
--	}
-+        {
-+          gfc_error ("Component '%s' at %C already declared at %L",
-+                     name, &p->loc);
-+          return FAILURE;
-+        }
-+    }
+   tail = NULL;
  
-+  tail = NULL;
-+  for (p = sym->components; p; p = p->next)
-       tail = p;
--    }
+   for (p = sym->components; p; p = p->next)
+@@ -1869,7 +1898,7 @@ gfc_add_component (gfc_symbol *sym, const char *name,
+     }
  
    if (sym->attr.extension
 -	&& gfc_find_component (sym->components->ts.u.derived, name, true, true))
@@ -9179,15 +9682,7 @@ index 1b3702f..704a509 100644
      {
        gfc_error ("Component '%s' at %C already in the parent type "
  		 "at %L", name, &sym->components->ts.u.derived->declared_at);
-@@ -1892,7 +1921,6 @@ gfc_add_component (gfc_symbol *sym, const char *name,
-   return SUCCESS;
- }
- 
--
- /* Recursive function to switch derived types of all symbol in a
-    namespace.  */
- 
-@@ -1960,7 +1988,7 @@ gfc_use_derived (gfc_symbol *sym)
+@@ -1960,7 +1989,7 @@ gfc_use_derived (gfc_symbol *sym)
        return NULL;
      }
  
@@ -9196,7 +9691,7 @@ index 1b3702f..704a509 100644
      goto bad;
  
    /* Get rid of symbol sym, translating all references to s.  */
-@@ -1993,17 +2021,66 @@ bad:
+@@ -1993,17 +2022,66 @@ bad:
    return NULL;
  }
  
@@ -9266,7 +9761,7 @@ index 1b3702f..704a509 100644
  
    if (name == NULL || sym == NULL)
      return NULL;
-@@ -2013,10 +2090,38 @@ gfc_find_component (gfc_symbol *sym, const char *name,
+@@ -2013,10 +2091,38 @@ gfc_find_component (gfc_symbol *sym, const char *name,
    if (sym == NULL)
      return NULL;
  
@@ -9306,7 +9801,7 @@ index 1b3702f..704a509 100644
    if (p && sym->attr.use_assoc && !noaccess)
      {
        bool is_parent_comp = sym->attr.extension && (p == sym->components);
-@@ -2032,12 +2137,14 @@ gfc_find_component (gfc_symbol *sym, const char *name,
+@@ -2032,12 +2138,14 @@ gfc_find_component (gfc_symbol *sym, const char *name,
  	}
      }
  
@@ -9322,7 +9817,7 @@ index 1b3702f..704a509 100644
        /* Do not overwrite the error.  */
        if (p == NULL)
  	return p;
-@@ -2047,6 +2154,25 @@ gfc_find_component (gfc_symbol *sym, const char *name,
+@@ -2047,6 +2155,25 @@ gfc_find_component (gfc_symbol *sym, const char *name,
      gfc_error ("'%s' at %C is not a member of the '%s' structure",
  	       name, sym->name);
  
@@ -9348,7 +9843,7 @@ index 1b3702f..704a509 100644
    return p;
  }
  
-@@ -3115,11 +3241,9 @@ gfc_restore_last_undo_checkpoint (void)
+@@ -3115,11 +3242,9 @@ gfc_restore_last_undo_checkpoint (void)
  	  /* The derived type is saved in the symtree with the first
  	     letter capitalized; the all lower-case version to the
  	     derived type contains its associated generic function.  */
@@ -9363,7 +9858,7 @@ index 1b3702f..704a509 100644
  	    gfc_delete_symtree (&p->ns->sym_root, p->name);
  
  	  gfc_release_symbol (p);
-@@ -3636,6 +3760,10 @@ gfc_is_var_automatic (gfc_symbol *sym)
+@@ -3636,6 +3761,10 @@ gfc_is_var_automatic (gfc_symbol *sym)
        && sym->ts.u.cl
        && !gfc_is_constant_expr (sym->ts.u.cl->length))
      return true;
@@ -9374,7 +9869,7 @@ index 1b3702f..704a509 100644
    return false;
  }
  
-@@ -3859,7 +3987,7 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
+@@ -3859,7 +3988,7 @@ verify_bind_c_derived_type (gfc_symbol *derived_sym)
          }
        
        /* BIND(C) derived types must have interoperable components.  */
@@ -9383,7 +9878,7 @@ index 1b3702f..704a509 100644
  	  && curr_comp->ts.u.derived->ts.is_iso_c != 1 
            && curr_comp->ts.u.derived != derived_sym)
          {
-@@ -4548,9 +4676,7 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
+@@ -4548,9 +4677,7 @@ generate_isocbinding_symbol (const char *mod_name, iso_c_binding_symbol s,
  	  gfc_component *tmp_comp = NULL;
  	  char comp_name[(GFC_MAX_SYMBOL_LEN * 2) + 1];
  
@@ -9394,7 +9889,7 @@ index 1b3702f..704a509 100644
  
  	  /* Generate real derived type.  */
  	  tmp_symtree = gfc_find_symtree (gfc_current_ns->sym_root,
-@@ -4911,15 +5037,21 @@ gfc_type_compatible (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -4911,15 +5038,21 @@ gfc_type_compatible (gfc_typespec *ts1, gfc_typespec *ts2)
    bool is_class2 = (ts2->type == BT_CLASS);
    bool is_derived1 = (ts1->type == BT_DERIVED);
    bool is_derived2 = (ts2->type == BT_DERIVED);
@@ -9417,7 +9912,7 @@ index 1b3702f..704a509 100644
    if (is_derived1 && is_derived2)
      return gfc_compare_derived_types (ts1->u.derived, ts2->u.derived);
  
-@@ -4978,12 +5110,12 @@ gfc_find_dt_in_generic (gfc_symbol *sym)
+@@ -4978,12 +5111,12 @@ gfc_find_dt_in_generic (gfc_symbol *sym)
  {
    gfc_interface *intr = NULL;
  
@@ -9478,7 +9973,7 @@ index 26a5de2..4fe7d5c 100644
        for (c = gfc_constructor_first (e->value.constructor),
  	   cmp = e->ts.u.derived->components;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 7d23561..4733544 100644
+index 7d23561..1d34c2e 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -593,7 +593,7 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
@@ -9530,7 +10025,7 @@ index 7d23561..4733544 100644
        && sym->backend_decl
        && TREE_CODE (sym->backend_decl) == RECORD_TYPE)
      {
-@@ -4264,20 +4269,20 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
+@@ -4264,7 +4269,7 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
      }
    else switch (ts->type)
      {
@@ -9539,30 +10034,8 @@ index 7d23561..4733544 100644
        if (expr->expr_type != EXPR_STRUCTURE)
  	return false;
        cm = expr->ts.u.derived->components;
-       for (c = gfc_constructor_first (expr->value.constructor);
--	   c; c = gfc_constructor_next (c), cm = cm->next)
--	{
--	  if (!c->expr || cm->attr.allocatable)
--	    continue;
--	  if (!check_constant_initializer (c->expr, &cm->ts,
--					   cm->attr.dimension,
--					   cm->attr.pointer))
--	    return false;
--	}
-+          c; c = gfc_constructor_next (c), cm = cm->next)
-+       {
-+         if (!c->expr || cm->attr.allocatable)
-+           continue;
-+         if (!check_constant_initializer (c->expr, &cm->ts,
-+                                          cm->attr.dimension,
-+                                          cm->attr.pointer))
-+           return false;
-+       }
-       return true;
-     default:
-       return expr->expr_type == EXPR_CONSTANT;
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index d6411b0..369798a 100644
+index d6411b0..3776096 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1550,6 +1550,7 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
@@ -9596,24 +10069,7 @@ index d6411b0..369798a 100644
      {
        tree f2 = c->norestrict_decl;
        if (!f2 || DECL_FIELD_CONTEXT (f2) != TREE_TYPE (decl))
-@@ -1606,15 +1612,13 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
- static void
- conv_parent_component_references (gfc_se * se, gfc_ref * ref)
- {
--  gfc_component *c;
--  gfc_component *cmp;
-+  gfc_component *c, *cmp;
-   gfc_symbol *dt;
-   gfc_ref parent;
- 
-   dt = ref->u.c.sym;
-   c = ref->u.c.component;
- 
--  /* Return if the component is in the parent type.  */
-   for (cmp = dt->components; cmp; cmp = cmp->next)
-     if (strcmp (c->name, cmp->name) == 0)
-       return;
-@@ -5684,8 +5688,8 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
+@@ -5684,8 +5690,8 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
      {
        switch (ts->type)
  	{
@@ -9623,7 +10079,7 @@ index d6411b0..369798a 100644
  	  gfc_init_se (&se, NULL);
  	  if (ts->type == BT_CLASS && expr->expr_type == EXPR_NULL)
  	    gfc_conv_structure (&se, gfc_class_null_initializer(ts, expr), 1);
-@@ -5829,7 +5833,7 @@ gfc_trans_alloc_subarray_assign (tree dest, gfc_component * cm,
+@@ -5829,7 +5835,7 @@ gfc_trans_alloc_subarray_assign (tree dest, gfc_component * cm,
    gfc_add_modify (&block, dest, se.expr);
  
    /* Deal with arrays of derived types with allocatable components.  */
@@ -9632,7 +10088,7 @@ index d6411b0..369798a 100644
  	&& cm->ts.u.derived->attr.alloc_comp)
      tmp = gfc_copy_alloc_comp (cm->ts.u.derived,
  			       se.expr, dest,
-@@ -6016,7 +6020,7 @@ gfc_trans_subcomponent_assign (tree dest, gfc_component * cm, gfc_expr * expr)
+@@ -6016,7 +6022,7 @@ gfc_trans_subcomponent_assign (tree dest, gfc_component * cm, gfc_expr * expr)
  	  gfc_add_expr_to_block (&block, tmp);
  	}
      }
@@ -9641,7 +10097,7 @@ index d6411b0..369798a 100644
      {
        if (expr->expr_type != EXPR_STRUCTURE)
  	{
-@@ -6123,6 +6127,23 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
+@@ -6123,6 +6129,23 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
        return;
      }
  
@@ -9665,7 +10121,7 @@ index d6411b0..369798a 100644
    cm = expr->ts.u.derived->components;
  
    for (c = gfc_constructor_first (expr->value.constructor);
-@@ -6163,6 +6184,7 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
+@@ -6163,6 +6186,7 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
  	  CONSTRUCTOR_APPEND_ELT (v, cm->backend_decl, val);
  	}
      }
@@ -9673,7 +10129,7 @@ index d6411b0..369798a 100644
    se->expr = build_constructor (type, v);
    if (init)
      TREE_CONSTANT (se->expr) = 1;
-@@ -6835,7 +6857,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -6835,7 +6859,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
        gfc_trans_string_copy (&block, llen, lse->expr, ts.kind, rlen,
  			     rse->expr, ts.kind);
      }
@@ -9682,7 +10138,7 @@ index d6411b0..369798a 100644
      {
        cond = NULL_TREE;
  
-@@ -6878,7 +6900,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -6878,7 +6902,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
  	  gfc_add_expr_to_block (&block, tmp);
  	}
      }
@@ -9691,7 +10147,7 @@ index d6411b0..369798a 100644
      {
        gfc_add_block_to_block (&block, &lse->pre);
        gfc_add_block_to_block (&block, &rse->pre);
-@@ -7096,7 +7118,7 @@ fcncall_realloc_result (gfc_se *se, int rank)
+@@ -7096,7 +7120,7 @@ fcncall_realloc_result (gfc_se *se, int rank)
  
    res_desc = gfc_evaluate_now (desc, &se->pre);
    gfc_conv_descriptor_data_set (&se->pre, res_desc, null_pointer_node);
@@ -9700,7 +10156,7 @@ index d6411b0..369798a 100644
  
    /* Free the lhs after the function call and copy the result data to
       the lhs descriptor.  */
-@@ -7889,7 +7911,7 @@ copyable_array_p (gfc_expr * expr)
+@@ -7889,7 +7913,7 @@ copyable_array_p (gfc_expr * expr)
      case BT_CHARACTER:
        return false;
  
@@ -9811,7 +10267,7 @@ index 1d8588d..68cfb65 100644
  	      gfc_ref *ref;
  	      gfc_ref *last = NULL;
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
-index 30561ee..fd18675 100644
+index 30561ee..9430c5a 100644
 --- a/gcc/fortran/trans-types.c
 +++ b/gcc/fortran/trans-types.c
 @@ -1100,6 +1100,10 @@ gfc_typenode_for_spec (gfc_typespec * spec)
@@ -9887,60 +10343,7 @@ index 30561ee..fd18675 100644
  
  /* Build a tree node for a derived type.  If there are equal
     derived types, with different local names, these are built
-@@ -2443,37 +2502,40 @@ gfc_get_derived_type (gfc_symbol * derived)
-      pointer component (PR24092). If this happens, the fields
-      will be built and so we can return the type.  */
-   for (c = derived->components; c; c = c->next)
--    {
--      if (c->ts.type != BT_DERIVED && c->ts.type != BT_CLASS)
--	continue;
-+  {
-+    if (c->ts.type != BT_DERIVED && c->ts.type != BT_CLASS)
-+      continue;
- 
--      if ((!c->attr.pointer && !c->attr.proc_pointer)
--	  || c->ts.u.derived->backend_decl == NULL)
--	c->ts.u.derived->backend_decl = gfc_get_derived_type (c->ts.u.derived);
-+    if ((!c->attr.pointer && !c->attr.proc_pointer)
-+        || c->ts.u.derived->backend_decl == NULL)
-+      c->ts.u.derived->backend_decl = gfc_get_derived_type (c->ts.u.derived);
- 
--      if (c->ts.u.derived->attr.is_iso_c)
--        {
--          /* Need to copy the modified ts from the derived type.  The
--             typespec was modified because C_PTR/C_FUNPTR are translated
--             into (void *) from derived types.  */
--          c->ts.type = c->ts.u.derived->ts.type;
--          c->ts.kind = c->ts.u.derived->ts.kind;
--          c->ts.f90_type = c->ts.u.derived->ts.f90_type;
--	  if (c->initializer)
--	    {
--	      c->initializer->ts.type = c->ts.type;
--	      c->initializer->ts.kind = c->ts.kind;
--	      c->initializer->ts.f90_type = c->ts.f90_type;
--	      c->initializer->expr_type = EXPR_NULL;
--	    }
--        }
--    }
-+    if (c->ts.u.derived->attr.is_iso_c)
-+      {
-+        /* Need to copy the modified ts from the derived type.  The
-+           typespec was modified because C_PTR/C_FUNPTR are translated
-+           into (void *) from derived types.  */
-+        c->ts.type = c->ts.u.derived->ts.type;
-+        c->ts.kind = c->ts.u.derived->ts.kind;
-+        c->ts.f90_type = c->ts.u.derived->ts.f90_type;
-+        if (c->initializer)
-+          {
-+            c->initializer->ts.type = c->ts.type;
-+            c->initializer->ts.kind = c->ts.kind;
-+            c->initializer->ts.f90_type = c->ts.f90_type;
-+            c->initializer->expr_type = EXPR_NULL;
-+          }
-+      }
-+  }
- 
-   if (TYPE_FIELDS (derived->backend_decl))
+@@ -2473,7 +2532,10 @@ gfc_get_derived_type (gfc_symbol * derived)
      return derived->backend_decl;
  
    /* Build the type member list. Install the newly created RECORD_TYPE
@@ -10100,17 +10503,17 @@ index 0000000..0d39d48
 +endif
 +
 +end
-diff --git a/gcc/testsuite/gfortran.dg/cray_pointers_10.f90 b/gcc/testsuite/gfortran.dg/cray_pointers_10.f90
+diff --git a/gcc/testsuite/gfortran.dg/cray_pointers_11.f90 b/gcc/testsuite/gfortran.dg/cray_pointers_11.f90
 new file mode 100644
-index 0000000..fcc0132
+index 0000000..038e4dc
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/cray_pointers_10.f90
++++ b/gcc/testsuite/gfortran.dg/cray_pointers_11.f90
 @@ -0,0 +1,22 @@
 +! { dg-do compile }
 +! { dg-options "-fcray-pointer" }
 +!
-+! Since the introduction of Cray pointers in 4.1.0 as late as 4.8.3,
-+! component declarations within derived types would overwrite the typespec of 
++! PR fortran/62174
++! Component declarations within derived types would overwrite the typespec of 
 +! variables with the same name who were Cray pointees.
 +implicit none
 +
@@ -14869,6 +15272,70 @@ index 0000000..8a0d311
 +      INTEGER B/1/ ! { dg-error "Invalid old style initialization for derived type component" }
 +      END TYPE
 +      END
+diff --git a/gcc/testsuite/gfortran.dg/warn_arglist_1.f90 b/gcc/testsuite/gfortran.dg/warn_arglist_1.f90
+new file mode 100644
+index 0000000..ade1a4c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/warn_arglist_1.f90
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++! { dg-options "-Warglist-types" }
++!
++! Warn when %val()/%loc() cause type mismatches in arguments
++!
++
++subroutine printt (x)
++type t
++  real r
++end type
++type (t), intent(in) :: x
++print *, x%r
++end subroutine
++
++type t
++  real r
++end type
++type (t) y
++
++integer :: i
++i = loc(y)
++call printt (%loc(y)) ! { dg-warning "Type mismatch in argument" }
++call printt (%val(i)) ! { dg-warning "Type mismatch in argument" }
++
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/warn_arglist_2.f90 b/gcc/testsuite/gfortran.dg/warn_arglist_2.f90
+new file mode 100644
+index 0000000..69f778b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/warn_arglist_2.f90
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++! { dg-options "-Wno-arglist-types" }
++!
++! Don't warn when %val()/%loc() cause type mismatches in arguments
++!
++
++subroutine printt (x)
++type t
++  real r
++end type
++type (t), intent(in) :: x
++print *, x%r
++end subroutine
++
++type t
++  real r
++end type
++type (t) y
++
++integer :: i
++i = loc(y)
++call printt (%loc(y))
++call printt (%val(i))
++
++end
++
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index fa9c113..871d721 100644
 --- a/libgfortran/io/close.c
