@@ -5628,7 +5628,7 @@ index 30b3b7b..ef70478 100644
  }
  bt;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
-index 9827b6c..dea6c49 100644
+index 9827b6c..185e9c9 100644
 --- a/gcc/fortran/match.c
 +++ b/gcc/fortran/match.c
 @@ -111,6 +111,126 @@ gfc_op2string (gfc_intrinsic_op op)
@@ -5997,7 +5997,19 @@ index 9827b6c..dea6c49 100644
  	default:
  	  break;
  	}
-@@ -1920,7 +2265,7 @@ match_derived_type_spec (gfc_typespec *ts)
+@@ -1576,6 +1921,11 @@ gfc_match_if (gfc_statement *if_type)
+   match ("where", match_simple_where, ST_WHERE)
+   match ("write", gfc_match_write, ST_WRITE)
+ 
++  if (gfc_option.flag_type_print)
++    {
++      match ("type", gfc_match_print, ST_WRITE)
++    }
++
+   /* The gfc_match_assignment() above may have returned a MATCH_NO
+      where the assignment was to a named constant.  Check that
+      special case here.  */
+@@ -1920,7 +2270,7 @@ match_derived_type_spec (gfc_typespec *ts)
    if (derived && derived->attr.flavor == FL_PROCEDURE && derived->attr.generic)
      derived = gfc_find_dt_in_generic (derived);
  
@@ -6006,7 +6018,7 @@ index 9827b6c..dea6c49 100644
      {
        ts->type = BT_DERIVED;
        ts->u.derived = derived;
-@@ -5222,7 +5567,7 @@ select_intrinsic_set_tmp (gfc_typespec *ts)
+@@ -5222,7 +5572,7 @@ select_intrinsic_set_tmp (gfc_typespec *ts)
    gfc_symtree *tmp;
    int charlen = 0;
  
