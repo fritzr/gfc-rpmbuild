@@ -1,9 +1,9 @@
 diff --git a/README.md b/README.md
 new file mode 100644
-index 0000000..26115b5
+index 0000000..303dbb0
 --- /dev/null
 +++ b/README.md
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,145 @@
 +Open source fortran compiler for Midas
 +======================================
 +This repository contains source code for `gfc-gfortran`, a modified version
@@ -26,9 +26,11 @@ index 0000000..26115b5
 +
 +Installing the compiler
 +=======================
-+Soon binary RPMs will be released (targeted for RHEL 6+) which will enable
-+trivial installation of `gfc-gfortran` and related components. Until these are
-+available, you must build the compiler from scratch (see below).
++Binary RPMs are available in the
++[gfc-rpms](http://repo.rincon.com:5000/M50/gfc-rpms) repository which allow
++easy installation of `gfc-gfortran` and related components on x86_64 RedHat
++6.0+ systems. For other systems, you must build the compiler from scratch (see
++below).
 +
 +Building the compiler from scratch
 +==================================
@@ -43,7 +45,7 @@ index 0000000..26115b5
 +libmpc-devel
 +```
 +If you wish to build for 32-bit compatibility, you must also install the 32-bit
-+compatibility package for glibc-devel (i.e. `glibc-devel.i686` on x86_64).
++compatibility package for glibc-devel (e.g. `glibc-devel.i686` on x86_64).
 +
 +We will assume you have created three directories which this section will
 +refer to as `$GCCSRC`, `$GCCDST`, and `$GCCBLD`. These directories will be used
@@ -58,6 +60,18 @@ index 0000000..26115b5
 +(Note: The gcc sources are large (~80MB); if you find the download too slow,
 +you should try one of the [GNU mirror sites](http://www.gnu.org/prep/ftp.html).
 +Just replace [ftp://gcc.gnu.org/pub] with the URL of a site near you.)
++
++Next copy the files from this repository over the regular gcc sources. You can
++use the commands below to do so grabbing the latest version of the gfc-gfortran
++sources from this repository (make sure to replace `$username` with your
++RhodeCode username):
++
++```bash
++cd /tmp
++wget -O gfc-gcc-4.8.3.zip $username@repo.rincon.com:5000/M50/gfc-gfortran/archive/tip.zip
++unzip gfc-gcc-4.8.3.zip # extracts in ./gfc-gfortran-<hash>/
++rsync -raz gfc-gfortran-*/* $GCCSRC
++```
 +
 +Then simply configure gcc to build the fortran compiler into your `$GCCDST`.
 +If you do not have the 32-bit glibc-devel compatibility package installed,
@@ -3209,7 +3223,7 @@ index 4f9008d..4c5a3f2 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 725cd8a..33fe1ae 100644
+index 725cd8a..c8ff03f 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
 @@ -383,19 +383,125 @@ gfc_match_end_interface (void)
@@ -3500,20 +3514,21 @@ index 725cd8a..33fe1ae 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2466,6 +2569,12 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2466,6 +2569,13 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
        if (f->sym == NULL && a->expr == NULL)
  	goto match;
  
 +      /* With -Wno-arglist-types, ignore mismatches with arglist funcs. */
 +      if (!gfc_option.warn_arglist_types && a->name
 +          && (   strncmp (a->name, "%VAL", 4) == 0
++              || strncmp (a->name, "%REF", 4) == 0
 +              || strncmp (a->name, "%LOC", 4) == 0))
 +        goto match;
 +
        if (f->sym == NULL)
  	{
  	  if (where)
-@@ -2514,7 +2623,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2514,7 +2624,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
        if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
@@ -3522,7 +3537,7 @@ index 725cd8a..33fe1ae 100644
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3437,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3438,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
