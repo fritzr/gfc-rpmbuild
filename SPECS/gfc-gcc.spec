@@ -3,7 +3,7 @@
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
 %global gcc_release 8
-%global for_patch_version 0008
+%global for_patch_version 0010
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
 %global _performance_build 1
