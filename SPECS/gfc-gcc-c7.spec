@@ -6,7 +6,7 @@
 # %{release}, append them after %{gcc_release} on Release: line.
 %global gcc_release 10
 # gcc_release_extra is appended to gcc_release on the Release: line
-%global gcc_release_extra -c7
+%global gcc_release_extra _c7
 %global for_patch_version 0010
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
@@ -336,7 +336,7 @@ Provides: libstdc++-docs = %{gcc_provides}
 Manual, doxygen generated API information and Frequently Asked Questions
 for the GNU standard C++ library.
 
-%package -n %{program_prefix}gfortran
+%package %{program_prefix}gfortran
 Summary: Fortran support
 Group: Development/Languages
 Requires: %{program_prefix}gcc = %{version}-%{release}
@@ -350,10 +350,10 @@ Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Autoreq: true
 %if "%{version}" != "%{gcc_version}"
-Provides: gcc-gfortran = %{gcc_provides}
+Provides: %{program_prefix}gfortran = %{gcc_provides}
 %endif
 
-%description -n %{program_prefix}gfortran
+%description %{program_prefix}gfortran
 The %{program_prefix}gfortran package provides support for compiling Fortran
 programs with the GNU Compiler Collection.
 
@@ -659,7 +659,7 @@ Provides: libgcj-src = %{gcc_provides}
 %description -n libgcj-src
 The Java(tm) runtime library sources for use in Eclipse.
 
-%package -n cpp
+%package -n %{program_prefix}cpp
 Summary: The C Preprocessor
 Group: Development/Languages
 Requires: filesystem >= 3
@@ -671,7 +671,7 @@ Autoreq: true
 Provides: cpp = %{gcc_provides}
 %endif
 
-%description -n cpp
+%description -n %{program_prefix}cpp
 Cpp is the GNU C-Compatible Compiler Preprocessor.
 Cpp is a macro processor which is used automatically
 by the C compiler to transform your program before actual
@@ -2107,25 +2107,25 @@ if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}gcc.info.gz ]; then
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gcc.info.gz || :
 fi
 
-%post -n cpp
+%post -n %{program_prefix}cpp
 if [ -f %{_infodir}/%{program_prefix}cpp.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}cpp.info.gz || :
 fi
 
-%preun -n cpp
+%preun -n %{program_prefix}cpp
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}cpp.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}cpp.info.gz || :
 fi
 
-%post gfortran
+%post %{program_prefix}gfortran
 if [ -f %{_infodir}/%{program_prefix}gfortran.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gfortran.info.gz || :
 fi
 
-%preun gfortran
+%preun %{program_prefix}gfortran
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}gfortran.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}gfortran.info.gz || :
@@ -2141,26 +2141,6 @@ fi
 if [ $1 = 0 -a -f %{_infodir}/gcj.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/gcj.info.gz || :
-fi
-
-%post gnat
-if [ -f %{_infodir}/gnat_rm.info.gz ]; then
-  /sbin/install-info \
-    --info-dir=%{_infodir} %{_infodir}/gnat_rm.info.gz || :
-  /sbin/install-info \
-    --info-dir=%{_infodir} %{_infodir}/gnat_ugn.info.gz || :
-  /sbin/install-info \
-    --info-dir=%{_infodir} %{_infodir}/gnat-style.info.gz || :
-fi
-
-%preun gnat
-if [ $1 = 0 -a -f %{_infodir}/gnat_rm.info.gz ]; then
-  /sbin/install-info --delete \
-    --info-dir=%{_infodir} %{_infodir}/gnat_rm.info.gz || :
-  /sbin/install-info --delete \
-    --info-dir=%{_infodir} %{_infodir}/gnat_ugn.info.gz || :
-  /sbin/install-info --delete \
-    --info-dir=%{_infodir} %{_infodir}/gnat-style.info.gz || :
 fi
 
 # Because glibc Prereq's libgcc and /sbin/ldconfig
@@ -2190,10 +2170,6 @@ end
 
 %postun -n libstdc++ -p /sbin/ldconfig
 
-%post -n libobjc -p /sbin/ldconfig
-
-%postun -n libobjc -p /sbin/ldconfig
-
 %post -n libgcj
 /sbin/ldconfig
 if [ -f %{_infodir}/cp-tools.info.gz ]; then
@@ -2216,10 +2192,6 @@ fi
 %post -n libgfortran -p /sbin/ldconfig
 
 %postun -n libgfortran -p /sbin/ldconfig
-
-%post -n libgnat -p /sbin/ldconfig
-
-%postun -n libgnat -p /sbin/ldconfig
 
 %post -n libgomp
 /sbin/ldconfig
@@ -2281,10 +2253,6 @@ fi
 %post -n libtsan -p /sbin/ldconfig
 
 %postun -n libtsan -p /sbin/ldconfig
-
-%post -n libgo -p /sbin/ldconfig
-
-%postun -n libgo -p /sbin/ldconfig
 
 %files -f %{name}.lang
 %defattr(-,root,root,-)
@@ -2656,52 +2624,6 @@ fi
 %doc rpm.doc/libstdc++-v3/html
 %endif
 
-%files objc
-%defattr(-,root,root,-)
-%dir %{_prefix}/lib/gcc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{version}
-%endif
-%dir %{_prefix}/libexec/gcc
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{version}
-%endif
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/include
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/include/objc
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}/cc1obj
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libobjc.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libobjc.so
-%ifarch sparcv9 ppc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libobjc.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/libobjc.so
-%endif
-%ifarch %{multilib_64_archs}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libobjc.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/libobjc.so
-%endif
-%doc rpm.doc/objc/*
-%doc libobjc/THREADS* rpm.doc/changelogs/libobjc/ChangeLog*
-
-%files objc++
-%defattr(-,root,root,-)
-%dir %{_prefix}/libexec/gcc
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{version}
-%endif
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}/cc1objplus
-
-%files -n libobjc
-%defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libobjc.so.4*
-
 %files %{program_prefix}gfortran
 %defattr(-,root,root,-)
 %{_prefix}/bin/%{program_prefix}gfortran
@@ -2927,102 +2849,6 @@ fi
 %{_prefix}/share/java/libgcj-tools-%{gcc_version_full}.jar
 %if "%{version}" != "%{gcc_version_full}"
 %{_prefix}/share/java/libgcj-tools-%{version}.jar
-%endif
-%endif
-
-%if %{build_ada}
-%files gnat
-%defattr(-,root,root,-)
-%{_prefix}/bin/gnat
-%{_prefix}/bin/gnat[^i]*
-%{_infodir}/gnat*
-%dir %{_prefix}/lib/gcc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{version}
-%endif
-%dir %{_prefix}/libexec/gcc
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}
-%dir %{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{version}
-%endif
-%ifarch sparcv9 ppc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/64/adalib
-%endif
-%ifarch %{multilib_64_archs}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/32/adalib
-%endif
-%ifarch sparcv9 sparc64 ppc ppc64 ppc64p7
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib
-%endif
-%{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}/gnat1
-%doc rpm.doc/changelogs/gcc/ada/ChangeLog*
-
-%files -n libgnat
-%defattr(-,root,root,-)
-%{_prefix}/%{_lib}/libgnat-*.so
-%{_prefix}/%{_lib}/libgnarl-*.so
-
-%files -n libgnat-devel
-%defattr(-,root,root,-)
-%dir %{_prefix}/lib/gcc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{version}
-%endif
-%ifarch sparcv9 ppc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib/libgnat.a
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib/libgnarl.a
-%endif
-%ifarch sparc64 ppc64 ppc64p7
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib/libgnat.a
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib/libgnarl.a
-%endif
-%ifnarch sparcv9 sparc64 ppc ppc64 ppc64p7
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adainclude
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib/libgnat.a
-%exclude %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib/libgnarl.a
-%endif
-
-%files -n libgnat-static
-%defattr(-,root,root,-)
-%dir %{_prefix}/lib/gcc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
-%if "%{version}" != "%{gcc_version_full}"
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{version}
-%endif
-%ifarch sparcv9 ppc
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib/libgnat.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib32/adalib/libgnarl.a
-%endif
-%ifarch sparc64 ppc64 ppc64p7
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib/libgnat.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/lib64/adalib/libgnarl.a
-%endif
-%ifnarch sparcv9 sparc64 ppc ppc64 ppc64p7
-%dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib/libgnat.a
-%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/adalib/libgnarl.a
 %endif
 %endif
 
