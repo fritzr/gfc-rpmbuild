@@ -66,8 +66,8 @@
 # do on some arch which has it rpmbuild -bc --with java_tar gcc.spec
 # which creates libjava-classes-%{version}-%{release}.tar.bz2
 # With this then on the new arch do rpmbuild -ba -v --with java_bootstrap gcc.spec
-%global bootstrap_java %{?_with_java_bootstrap:%{build_java}}%{!?_with_java_bootstrap:0}
-%global build_java_tar %{?_with_java_tar:%{build_java}}%{!?_with_java_tar:0}
+%global bootstrap_java 0
+%global build_java_tar 0
 %ifarch s390x
 %global multilib_32_arch s390
 %endif
