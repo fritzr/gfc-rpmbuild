@@ -53,7 +53,10 @@
 %global build_libitm 0
 %endif
 %global build_cloog 1
-%global build_libstdcxx_docs 1
+%global build_gmp 1
+%global build_mpfr 1
+%global build_mpc 1
+%global build_libstdcxx_docs 0
 %ifarch %{ix86} x86_64 ppc ppc64 ppc64le ppc64p7 s390 s390x %{arm} aarch64
 %global attr_ifunc 1
 %else
@@ -111,7 +114,7 @@ BuildRoot: %{_tmppath}/%{name}-%{gcc_version_full}-%{release}-root-%(%{__id_u} -
 # Need binutils which support %gnu_unique_object >= 2.19.51.0.14
 # Need binutils which support .cfi_sections >= 2.19.51.0.14-33
 # Need binutils which support --no-add-needed >= 2.20.51.0.2-12
-BuildRequires: binutils >= 2.20.51.0.2-12
+BuildRequires: binutils >= 2.20.51.0.2
 # While gcc doesn't include statically linked binaries, during testing
 # -static is used several times.
 #BuildRequires: glibc-static
@@ -129,7 +132,7 @@ BuildRequires: /usr/share/java/eclipse-ecj.jar, zip, unzip
 %if %{bootstrap_java}
 Source10: libjava-classes-%{version}-%{release}.tar.bz2
 %else
-BuildRequires: gcc-java, libgcj
+#BuildRequires: gcc-java, libgcj
 %endif
 %endif
 # Make sure pthread.h doesn't contain __thread tokens
@@ -171,7 +174,7 @@ Requires: %{program_prefix}cpp = %{version}-%{release}
 # Need binutils that support %gnu_unique_object
 # Need binutils that support .cfi_sections
 # Need binutils that support --no-add-needed
-Requires: binutils >= 2.20.51.0.2-12
+Requires: binutils >= 2.20.51.0.2
 # Make sure gdb will understand DW_FORM_strp
 Conflicts: gdb < 5.1-2
 Requires: glibc-devel >= 2.2.90-12
@@ -345,7 +348,16 @@ Requires: libgfortran = %{version}-%{release}
 Requires: libquadmath = %{version}-%{release}
 Requires: libquadmath-devel = %{version}-%{release}
 %endif
-BuildRequires: gmp-devel >= 4.1.2-8, mpfr-devel >= 2.2.1, libmpc-devel >= 0.8.1
+#BuildRequires: gmp-devel >= 4.1.2-8, mpfr-devel >= 2.2.1, libmpc-devel >= 0.8.1
+%if !%{build_gmp}
+BuildRequires: gmp-devel >= 4.1.2-8
+%endif
+%if !%{build_mpfr}
+BuildRequires: mpfr-devel >= 2.2.1
+%endif
+%if !%{build_mpc}
+BuildRequires: mpc-devel >= 0.8.1
+%endif
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 Autoreq: true
@@ -1014,6 +1026,50 @@ rm -f gcc/testsuite/go.test/test/chan/goroutines.go
 # Undo the broken autoconf change in recent Fedora versions
 export CONFIG_SITE=NONE
 
+BUILD=`pwd`
+
+%if %{build_gmp}
+mkdir gmp-build gmp-install
+cd gmp-build
+../../gmp-%{gmp_version}/configure --disable-shared \
+  CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
+  --prefix=$BUILD/gmp-install
+make
+make install
+cd ..
+%endif
+
+%if %{build_mpfr}
+mkdir mpfr-build mpfr-install
+cd mpfr-build
+../../mpfr-%{mpfr_version}/configure --disable-shared \
+%if %{build_gmp}
+  --with-gmp=$BUILD/gmp-install \
+%endif
+  CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
+  --prefix=$BUILD/mpfr-install
+make
+make install
+cd ..
+%endif
+
+%if %{build_mpc}
+mkdir mpc-build mpc-install
+cd mpc-build
+../../mpc-%{mpc_version}/configure --disable-shared \
+%if %{build_gmp}
+  --with-gmp=$BUILD/gmp-install \
+%endif
+%if %{build_mpfr}
+  --with-mpfr=$BUILD/mpfr-install \
+%endif
+  CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
+  --prefix=$BUILD/mpc-install
+make
+make install
+cd ..
+%endif
+
 %if %{build_java}
 export GCJ_PROPERTIES=jdt.compiler.useSingleThread=true
 # gjar isn't usable, so even when GCC source tree no longer includes
@@ -1173,6 +1229,21 @@ CC="$CC" CFLAGS="$OPT_FLAGS" \
 	--with-isl=`pwd`/isl-install --with-cloog=`pwd`/cloog-install \
 %else
 	--without-isl --without-cloog \
+%endif
+%if %{build_gmp}
+        --with-gmp=$BUILD/gmp-install \
+%else
+        --with-system-gmp
+%endif
+%if %{build_mpfr}
+        --with-mpfr=$BUILD/mpfr-install \
+%else
+        --with-system-mpfr
+%endif
+%if %{build_mpc}
+        --with-mpc=$BUILD/mpc-install \
+%else
+        --with-system-mpc
 %endif
 %if 0%{?fedora} >= 21 || 0%{?rhel} >= 7
 %if %{attr_ifunc}
