@@ -1004,6 +1004,9 @@ ISL_FLAG_PIC=-fpic
 %endif
 cd isl-build
 ../../isl-%{isl_version}/configure --disable-shared \
+%if %{build_gmp}
+  --with-gmp=$BUILDDIR/gmp-install \
+%endif
   CC=/usr/bin/gcc CXX=/usr/bin/g++ \
   CFLAGS="${CFLAGS:-%optflags} $ISL_FLAG_PIC" --prefix=`cd ..; pwd`/isl-install
 make %{?_smp_mflags}
