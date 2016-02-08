@@ -2340,7 +2340,7 @@ index 2772932..369d245 100644
  
  	    case EXEC_CLOSE:
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index bd1aeb9..af0533b 100644
+index bd1aeb9..c144052 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -49,7 +49,18 @@ along with GCC; see the file COPYING3.  If not see
@@ -2459,7 +2459,7 @@ index bd1aeb9..af0533b 100644
    int warn_realloc_lhs_all;
    int warn_compare_reals;
    int warn_target_lifetime;
-+  int warn_arglist_types;
++  int warn_argument_mismatch;
    int max_errors;
  
    int flag_all_intrinsics;
@@ -3223,7 +3223,7 @@ index 4f9008d..4c5a3f2 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 725cd8a..c8ff03f 100644
+index 725cd8a..58cd7fb 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
 @@ -383,19 +383,125 @@ gfc_match_end_interface (void)
@@ -3514,21 +3514,17 @@ index 725cd8a..c8ff03f 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2466,6 +2569,13 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
-       if (f->sym == NULL && a->expr == NULL)
+@@ -2463,7 +2566,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+ 	  return 0;
+ 	}
+ 
+-      if (f->sym == NULL && a->expr == NULL)
++      if (!gfc_option.warn_argument_mismatch
++          || (f->sym == NULL && a->expr == NULL))
  	goto match;
  
-+      /* With -Wno-arglist-types, ignore mismatches with arglist funcs. */
-+      if (!gfc_option.warn_arglist_types && a->name
-+          && (   strncmp (a->name, "%VAL", 4) == 0
-+              || strncmp (a->name, "%REF", 4) == 0
-+              || strncmp (a->name, "%LOC", 4) == 0))
-+        goto match;
-+
        if (f->sym == NULL)
- 	{
- 	  if (where)
-@@ -2514,7 +2624,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2514,7 +2618,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
        if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
@@ -3537,7 +3533,7 @@ index 725cd8a..c8ff03f 100644
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3438,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3432,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
@@ -5107,7 +5103,7 @@ index 1e31e4f..1e134ca 100644
  
  
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index b0b43d8..66f8f0b 100644
+index b0b43d8..56d9d77 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -115,13 +115,17 @@ by type.  Explanations are in the following sections.
@@ -5140,8 +5136,8 @@ index b0b43d8..66f8f0b 100644
  -Wline-truncation -Wno-align-commons -Wno-tabs -Wreal-q-constant @gol
  -Wsurprising -Wunderflow -Wunused-parameter -Wrealloc-lhs Wrealloc-lhs-all @gol
 --Wtarget-lifetime -fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
-+-Wtarget-lifetime -Warglist-types -flazy-logicals @gol
-+-fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
++-Wtarget-lifetime -Wargument-mismatch @gol
++-flazy-logicals -fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
  }
  
  @item Debugging Options
@@ -5259,29 +5255,19 @@ index b0b43d8..66f8f0b 100644
  @item -fmax-errors=@var{n}
  @opindex @code{fmax-errors=}@var{n}
  @cindex errors, limiting
-@@ -728,7 +819,7 @@ This currently includes @option{-Waliasing}, @option{-Wampersand},
- @option{-Wconversion}, @option{-Wsurprising}, @option{-Wc-binding-type},
- @option{-Wintrinsics-std}, @option{-Wno-tabs}, @option{-Wintrinsic-shadow},
- @option{-Wline-truncation}, @option{-Wtarget-lifetime},
--@option{-Wreal-q-constant} and @option{-Wunused}.
-+@option{-Warglist-types}, @option{-Wreal-q-constant} and @option{-Wunused}.
- 
- @item -Waliasing
- @opindex @code{Waliasing}
-@@ -954,6 +1045,12 @@ This option is implied by @option{-Wextra}.
+@@ -954,6 +1045,11 @@ This option is implied by @option{-Wextra}.
  Warn if the pointer in a pointer assignment might be longer than the its
  target. This option is implied by @option{-Wall}.
  
-+@item -Warglist-types
-+@opindex @code{Warglist-types}
-+Disabling this prevents warnings when the argument list functions %val() or
-+%loc() cause a type mismatch between formal/actual arguments in a function
-+call. Enabled by default. This option is implied by @option{-Wall}.
++@item -Wargument-mismatch
++@opindex @code{Wargument-mismatch}
++Warn when the type or rank of formal and actual arguments do not match.
++Enabled by default.
 +
  @item -Werror
  @opindex @code{Werror}
  @cindex warnings, to errors
-@@ -1518,11 +1615,13 @@ on the stack. This flag cannot be used together with
+@@ -1518,11 +1614,13 @@ on the stack. This flag cannot be used together with
  @option{-fmax-stack-var-size=} or @option{-fno-automatic}.
  
  @item -finit-local-zero
@@ -5295,7 +5281,7 @@ index b0b43d8..66f8f0b 100644
  @opindex @code{finit-integer}
  @opindex @code{finit-real}
  @opindex @code{finit-logical}
-@@ -1537,7 +1636,7 @@ initialization options are provided by the
+@@ -1537,7 +1635,7 @@ initialization options are provided by the
  the real and imaginary parts of local @code{COMPLEX} variables),
  @option{-finit-logical=@var{<true|false>}}, and
  @option{-finit-character=@var{n}} (where @var{n} is an ASCII character
@@ -5304,7 +5290,7 @@ index b0b43d8..66f8f0b 100644
  @itemize @bullet
  @item
  allocatable arrays
-@@ -1546,7 +1645,8 @@ components of derived type variables
+@@ -1546,7 +1644,8 @@ components of derived type variables
  @item
  variables that appear in an @code{EQUIVALENCE} statement.
  @end itemize
@@ -5526,16 +5512,16 @@ index 2499c90..42f5649 100644
  IOPARM (close,   status,	1 << 7,  char1)
  IOPARM (filepos, common,	0,	 common)
 diff --git a/gcc/fortran/lang.opt b/gcc/fortran/lang.opt
-index fbe8a1b..02bd96a 100644
+index fbe8a1b..4195f7e 100644
 --- a/gcc/fortran/lang.opt
 +++ b/gcc/fortran/lang.opt
 @@ -205,6 +205,10 @@ Wampersand
  Fortran Warning
  Warn about missing ampersand in continued character constants
  
-+Warglist-types
++Wargument-mismatch
 +Fortran Warning
-+Warn about type mismatches for %loc() or %val() as actual arguments
++Warn about type mismatches between formal and actual function arguments
 +
  Warray-temporaries
  Fortran Warning
@@ -6303,7 +6289,7 @@ index 05de49b..3724e6e 100644
  		   &expr->where);
      }
 diff --git a/gcc/fortran/options.c b/gcc/fortran/options.c
-index fba1a3f..e91add4 100644
+index fba1a3f..a329abb 100644
 --- a/gcc/fortran/options.c
 +++ b/gcc/fortran/options.c
 @@ -51,6 +51,27 @@ set_default_std_flags (void)
@@ -6338,7 +6324,7 @@ index fba1a3f..e91add4 100644
    gfc_option.warn_realloc_lhs_all = 0;
    gfc_option.warn_compare_reals = 0;
    gfc_option.warn_target_lifetime = 0;
-+  gfc_option.warn_arglist_types = 1;
++  gfc_option.warn_argument_mismatch = 1;
    gfc_option.max_errors = 25;
  
    gfc_option.flag_all_intrinsics = 0;
@@ -6360,26 +6346,18 @@ index fba1a3f..e91add4 100644
    set_default_std_flags ();
  
    /* Initialize cpp-related options.  */
-@@ -474,6 +500,7 @@ set_Wall (int setting)
-   gfc_option.warn_real_q_constant = setting;
-   gfc_option.warn_unused_dummy_argument = setting;
-   gfc_option.warn_target_lifetime = setting;
-+  gfc_option.warn_arglist_types = setting;
- 
-   warn_return_type = setting;
-   warn_uninitialized = setting;
-@@ -726,6 +753,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -726,6 +752,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.warn_unused_dummy_argument = value;
        break;
  
-+    case OPT_Warglist_types:
-+      gfc_option.warn_arglist_types = value;
++    case OPT_Wargument_mismatch:
++      gfc_option.warn_argument_mismatch = value;
 +      break;
 +
      case OPT_fall_intrinsics:
        gfc_option.flag_all_intrinsics = 1;
        break;
-@@ -942,6 +973,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -942,6 +972,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.flag_init_character_value = (char)0;
        break;
  
@@ -6390,7 +6368,7 @@ index fba1a3f..e91add4 100644
      case OPT_finit_logical_:
        if (!strcasecmp (arg, "false"))
  	gfc_option.flag_init_logical = GFC_INIT_LOGICAL_FALSE;
-@@ -1119,6 +1154,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -1119,6 +1153,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
      case OPT_fcoarray_:
        gfc_handle_coarray_option (arg);
        break;
@@ -15537,6 +15515,70 @@ index 0000000..d64502a
 +
 +      END PROGRAM MAIN
 +
+diff --git a/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for
+new file mode 100644
+index 0000000..c4d82fe
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++! { dg-options "-Wargtype-mismatch" }
++!
++! Warn when %val()/%loc() cause type mismatches in arguments
++!
++
++subroutine printt (x)
++type t
++  real r
++end type
++type (t), intent(in) :: x
++print *, x%r
++end subroutine
++
++type t
++  real r
++end type
++type (t) y
++
++integer :: i
++i = loc(y)
++call printt (%loc(y)) ! { dg-warning "Type mismatch in argument" }
++call printt (%val(i)) ! { dg-warning "Type mismatch in argument" }
++
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for
+new file mode 100644
+index 0000000..a5e742f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for
+@@ -0,0 +1,26 @@
++! { dg-do compile }
++! { dg-options "-Wno-argtype-mismatch" }
++!
++! Don't warn when %val()/%loc() cause type mismatches in arguments
++!
++
++subroutine printt (x)
++type t
++  real r
++end type
++type (t), intent(in) :: x
++print *, x%r
++end subroutine
++
++type t
++  real r
++end type
++type (t) y
++
++integer :: i
++i = loc(y)
++call printt (%loc(y))
++call printt (%val(i))
++
++end
++
 diff --git a/gcc/testsuite/gfortran.dg/dec/xor.f b/gcc/testsuite/gfortran.dg/dec/xor.f
 new file mode 100644
 index 0000000..ba25142
@@ -15721,70 +15763,6 @@ index 0000000..8a0d311
 +      INTEGER B/1/ ! { dg-error "Invalid old style initialization for derived type component" }
 +      END TYPE
 +      END
-diff --git a/gcc/testsuite/gfortran.dg/warn_arglist_1.f90 b/gcc/testsuite/gfortran.dg/warn_arglist_1.f90
-new file mode 100644
-index 0000000..ade1a4c
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/warn_arglist_1.f90
-@@ -0,0 +1,26 @@
-+! { dg-do compile }
-+! { dg-options "-Warglist-types" }
-+!
-+! Warn when %val()/%loc() cause type mismatches in arguments
-+!
-+
-+subroutine printt (x)
-+type t
-+  real r
-+end type
-+type (t), intent(in) :: x
-+print *, x%r
-+end subroutine
-+
-+type t
-+  real r
-+end type
-+type (t) y
-+
-+integer :: i
-+i = loc(y)
-+call printt (%loc(y)) ! { dg-warning "Type mismatch in argument" }
-+call printt (%val(i)) ! { dg-warning "Type mismatch in argument" }
-+
-+end
-+
-diff --git a/gcc/testsuite/gfortran.dg/warn_arglist_2.f90 b/gcc/testsuite/gfortran.dg/warn_arglist_2.f90
-new file mode 100644
-index 0000000..69f778b
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/warn_arglist_2.f90
-@@ -0,0 +1,26 @@
-+! { dg-do compile }
-+! { dg-options "-Wno-arglist-types" }
-+!
-+! Don't warn when %val()/%loc() cause type mismatches in arguments
-+!
-+
-+subroutine printt (x)
-+type t
-+  real r
-+end type
-+type (t), intent(in) :: x
-+print *, x%r
-+end subroutine
-+
-+type t
-+  real r
-+end type
-+type (t) y
-+
-+integer :: i
-+i = loc(y)
-+call printt (%loc(y))
-+call printt (%val(i))
-+
-+end
-+
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index fa9c113..871d721 100644
 --- a/libgfortran/io/close.c
