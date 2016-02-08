@@ -103,11 +103,11 @@ Source2: ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-%{cloog_version}.tar.gz
 %global fastjar_ver 0.97
 Source4: http://download.savannah.nongnu.org/releases/fastjar/fastjar-%{fastjar_ver}.tar.gz
 %global gmp_version 4.3.2
-Source3: ftp://gcc.gnu.org/pub/gcc/infrastructure/gmp-%{gmp_version}.tar.bz2
+Source5: ftp://gcc.gnu.org/pub/gcc/infrastructure/gmp-%{gmp_version}.tar.bz2
 %global mpfr_version 2.4.2
-Source4: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpfr-%{mpfr_version}.tar.bz2
+Source6: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpfr-%{mpfr_version}.tar.bz2
 %global mpc_version 0.8.1
-Source5: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpc-%{mpc_version}.tar.gz
+Source7: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpc-%{mpc_version}.tar.gz
 URL: http://gcc.gnu.org
 BuildRoot: %{_tmppath}/%{name}-%{gcc_version_full}-%{release}-root-%(%{__id_u} -n)
 # Need binutils with -pie support >= 2.14.90.0.4-4
@@ -869,7 +869,19 @@ package or when debugging this package.
 %endif
 
 %prep
+%if %{build_mpc}
+%setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 5 -a 6 -a 7
+%else
+%if %{build_mpfr}
+%setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 5 -a 6
+%else
+%if %{build_gmp}
+%setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 5
+%else
 %setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2
+%endif
+%endif
+%endif
 %patch0 -p0 -b .hack~
 %patch1 -p0 -b .java-nomulti~
 %patch2 -p0 -b .ppc32-retaddr~
@@ -1032,14 +1044,14 @@ rm -f gcc/testsuite/go.test/test/chan/goroutines.go
 # Undo the broken autoconf change in recent Fedora versions
 export CONFIG_SITE=NONE
 
-BUILD=`pwd`
+BUILDDIR=%{_builddir}/gcc-%{version}-%{DATE}
 
 %if %{build_gmp}
 mkdir gmp-build gmp-install
 cd gmp-build
-../../gmp-%{gmp_version}/configure --disable-shared \
+$BUILDDIR/gmp-%{gmp_version}/configure --disable-shared \
   CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
-  --prefix=$BUILD/gmp-install
+  --prefix=$BUILDDIR/gmp-install
 make
 make install
 cd ..
@@ -1048,12 +1060,12 @@ cd ..
 %if %{build_mpfr}
 mkdir mpfr-build mpfr-install
 cd mpfr-build
-../../mpfr-%{mpfr_version}/configure --disable-shared \
+$BUILDDIR/mpfr-%{mpfr_version}/configure --disable-shared \
 %if %{build_gmp}
-  --with-gmp=$BUILD/gmp-install \
+  --with-gmp=$BUILDDIR/gmp-install \
 %endif
   CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
-  --prefix=$BUILD/mpfr-install
+  --prefix=$BUILDDIR/mpfr-install
 make
 make install
 cd ..
@@ -1062,15 +1074,15 @@ cd ..
 %if %{build_mpc}
 mkdir mpc-build mpc-install
 cd mpc-build
-../../mpc-%{mpc_version}/configure --disable-shared \
+$BUILDDIR/mpc-%{mpc_version}/configure --disable-shared \
 %if %{build_gmp}
-  --with-gmp=$BUILD/gmp-install \
+  --with-gmp=$BUILDDIR/gmp-install \
 %endif
 %if %{build_mpfr}
-  --with-mpfr=$BUILD/mpfr-install \
+  --with-mpfr=$BUILDDIR/mpfr-install \
 %endif
   CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
-  --prefix=$BUILD/mpc-install
+  --prefix=$BUILDDIR/mpc-install
 make
 make install
 cd ..
@@ -1237,17 +1249,17 @@ CC="$CC" CFLAGS="$OPT_FLAGS" \
 	--without-isl --without-cloog \
 %endif
 %if %{build_gmp}
-        --with-gmp=$BUILD/gmp-install \
+        --with-gmp=$BUILDDIR/gmp-install \
 %else
         --with-system-gmp
 %endif
 %if %{build_mpfr}
-        --with-mpfr=$BUILD/mpfr-install \
+        --with-mpfr=$BUILDDIR/mpfr-install \
 %else
         --with-system-mpfr
 %endif
 %if %{build_mpc}
-        --with-mpc=$BUILD/mpc-install \
+        --with-mpc=$BUILDDIR/mpc-install \
 %else
         --with-system-mpc
 %endif
