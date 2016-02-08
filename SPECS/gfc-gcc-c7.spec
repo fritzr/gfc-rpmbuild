@@ -947,12 +947,18 @@ rm -f gcc/testsuite/go.test/test/chan/goroutines.go
 # Undo the broken autoconf change in recent Fedora versions
 export CONFIG_SITE=NONE
 
-BUILDDIR=%{_builddir}/gcc-%{version}-%{DATE}
+set -v
+
+rm -fr obj-%{gcc_target_platform}
+mkdir obj-%{gcc_target_platform}
+cd obj-%{gcc_target_platform}
+
+BUILDDIR=`pwd`
 
 %if %{build_gmp}
 mkdir gmp-build gmp-install
 cd gmp-build
-$BUILDDIR/gmp-%{gmp_version}/configure --disable-shared \
+../../gmp-%{gmp_version}/configure \
   CC=/usr/bin/gcc CXX=/usr/bin/g++ CFLAGS="${CFLAGS:-%optflags}" \
   --prefix=$BUILDDIR/gmp-install
 make
@@ -963,7 +969,7 @@ cd ..
 %if %{build_mpfr}
 mkdir mpfr-build mpfr-install
 cd mpfr-build
-$BUILDDIR/mpfr-%{mpfr_version}/configure --disable-shared \
+../../mpfr-%{mpfr_version}/configure \
 %if %{build_gmp}
   --with-gmp=$BUILDDIR/gmp-install \
 %endif
@@ -977,7 +983,7 @@ cd ..
 %if %{build_mpc}
 mkdir mpc-build mpc-install
 cd mpc-build
-$BUILDDIR/mpc-%{mpc_version}/configure --disable-shared \
+../../mpc-%{mpc_version}/configure \
 %if %{build_gmp}
   --with-gmp=$BUILDDIR/gmp-install \
 %endif
@@ -991,10 +997,6 @@ make install
 cd ..
 %endif
 
-rm -fr obj-%{gcc_target_platform}
-mkdir obj-%{gcc_target_platform}
-cd obj-%{gcc_target_platform}
-
 %if %{build_cloog}
 mkdir isl-build isl-install
 %ifarch s390 s390x
@@ -1005,10 +1007,11 @@ ISL_FLAG_PIC=-fpic
 cd isl-build
 ../../isl-%{isl_version}/configure --disable-shared \
 %if %{build_gmp}
-  --with-gmp=$BUILDDIR/gmp-install \
+  --with-gmp-prefix=$BUILDDIR/gmp-install \
 %endif
   CC=/usr/bin/gcc CXX=/usr/bin/g++ \
-  CFLAGS="${CFLAGS:-%optflags} $ISL_FLAG_PIC" --prefix=`cd ..; pwd`/isl-install
+  CFLAGS="${CFLAGS:-%optflags} $ISL_FLAG_PIC" \
+  --prefix=$BUILDDIR/isl-install
 make %{?_smp_mflags}
 make install
 cd ..
@@ -1024,10 +1027,11 @@ sed -i 's|libcloog|libgcc48privatecloog|g' \
   ../../cloog-%{cloog_version}/{,test/}Makefile.{am,in}
 isl_prefix=`cd ../isl-install; pwd` \
 ../../cloog-%{cloog_version}/configure --with-isl=system \
-  --with-isl-prefix=`cd ../isl-install; pwd` \
+  --with-isl-prefix=$BUILDDIR/isl-install \
+  --with-gmp-prefix=$BUILDDIR/gmp-install \
   CC=/usr/bin/gcc CXX=/usr/bin/g++ \
   CFLAGS="${CFLAGS:-%optflags}" CXXFLAGS="${CXXFLAGS:-%optflags}" \
-   --prefix=`cd ..; pwd`/cloog-install
+   --prefix=$BUILDDIR/cloog-install
 sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
 sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 make %{?_smp_mflags}
