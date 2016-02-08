@@ -102,6 +102,12 @@ Source1: ftp://gcc.gnu.org/pub/gcc/infrastructure/isl-%{isl_version}.tar.bz2
 Source2: ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-%{cloog_version}.tar.gz
 %global fastjar_ver 0.97
 Source4: http://download.savannah.nongnu.org/releases/fastjar/fastjar-%{fastjar_ver}.tar.gz
+%global gmp_version 4.3.2
+Source3: ftp://gcc.gnu.org/pub/gcc/infrastructure/gmp-%{gmp_version}.tar.bz2
+%global mpfr_version 2.4.2
+Source4: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpfr-%{mpfr_version}.tar.bz2
+%global mpc_version 0.8.1
+Source5: ftp://gcc.gnu.org/pub/gcc/infrastructure/mpc-%{mpc_version}.tar.gz
 URL: http://gcc.gnu.org
 BuildRoot: %{_tmppath}/%{name}-%{gcc_version_full}-%{release}-root-%(%{__id_u} -n)
 # Need binutils with -pie support >= 2.14.90.0.4-4
