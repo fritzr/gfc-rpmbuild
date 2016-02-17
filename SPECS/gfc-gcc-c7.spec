@@ -1004,10 +1004,12 @@ if [ -f %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version} ]; then
   rmdir %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version}
 fi
 
-# also move include/{gcc_version -> gcc_version_full}
-if [ -d %{buildroot}%{_prefix}/include/c++/%{gcc_version} ]; then
-  mv %{buildroot}%{_prefix}/include/c++/{%{gcc_version},%{gcc_version_full}}
-fi
+# move some other directories from gcc_version to gcc_version_full
+for dir in include/c++ lib/gcc/%{gcc_target_platform}; do
+  if [ -d %{buildroot}%{_prefix}/$dir/%{gcc_version} ]; then
+    mv %{buildroot}%{_prefix}/$dir/{%{gcc_version},%{gcc_version_full}}
+  fi
+done
 
 # fix some things
 ln -sf %{program_prefix}gcc %{buildroot}%{_prefix}/bin/%{program_prefix}cc
