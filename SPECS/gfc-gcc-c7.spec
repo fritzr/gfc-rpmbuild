@@ -1005,7 +1005,7 @@ if [ -f %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version} ]; then
 fi
 
 # move some other directories from gcc_version to gcc_version_full
-for dir in include/c++ lib/gcc/%{gcc_target_platform}; do
+for dir in include/c++ lib{,exec}/gcc/%{gcc_target_platform}; do
   if [ -d %{buildroot}%{_prefix}/$dir/%{gcc_version} ]; then
     mv %{buildroot}%{_prefix}/$dir/{%{gcc_version},%{gcc_version_full}}
   fi
