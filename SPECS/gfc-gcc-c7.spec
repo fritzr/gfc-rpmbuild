@@ -1,11 +1,11 @@
-%global DATE 20140911
-%global SVNREV 215159
-%global gcc_version 4.8.3
-%global gcc_version_full 4.8.3-for
+%global DATE 20150702
+%global SVNREV 225304
+%global gcc_version 4.8.5
+%global gcc_version_full 4.8.5-for
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 2
-%global for_patch_version 0010
+%global gcc_release 11
+%global for_patch_version 0011
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
 %global _performance_build 1
@@ -171,21 +171,22 @@ Patch10: gcc48-pr38757.patch
 Patch11: gcc48-libstdc++-docs.patch
 Patch12: gcc48-no-add-needed.patch
 Patch13: gcc48-pr56564.patch
-Patch14: gcc48-pr56493.patch
-Patch15: gcc48-color-auto.patch
-Patch16: gcc48-pr28865.patch
-Patch17: gcc48-libgo-p224.patch
-Patch18: gcc48-pr60010.patch
-Patch19: gcc48-aarch64-ada.patch
-Patch20: gcc48-aarch64-async-unw-tables.patch
-Patch21: gcc48-aarch64-unwind-opt.patch
-Patch22: gcc48-pr63341.patch
-Patch23: gcc48-pr63284.patch
-Patch24: gcc48-test-compat-Wno-abi.patch
-Patch25: gcc48-for-0009.patch
-Patch26: gcc48-for-0009-to-%{for_patch_version}.patch
-Patch27: gcc48-make.patch
+Patch14: gcc48-color-auto.patch
+Patch15: gcc48-pr28865.patch
+Patch16: gcc48-libgo-p224.patch
+Patch17: gcc48-pr60010.patch
+Patch18: gcc48-aarch64-ada.patch
+Patch19: gcc48-aarch64-async-unw-tables.patch
+Patch20: gcc48-aarch64-unwind-opt.patch
+Patch21: gcc48-rh1243366.patch
 
+Patch100: gcc48-for-%{for_patch_version}-4_8_5.patch
+Patch101: gcc48-for-version-hack.patch
+
+Patch1100: isl-%{isl_version}-aarch64-config.patch
+Patch1101: isl-%{isl_version}-ppc64le-config.patch
+
+Patch1200: cloog-%{cloog_version}-ppc64le-config.patch
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
 # target triple.
@@ -571,23 +572,21 @@ package or when debugging this package.
 %endif
 %patch12 -p0 -b .no-add-needed~
 %patch13 -p0 -b .pr56564~
-%patch14 -p0 -b .pr56493~
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
-%patch15 -p0 -b .color-auto~
+%patch14 -p0 -b .color-auto~
 %endif
-%patch16 -p0 -b .pr28865~
-%patch17 -p0 -b .libgo-p224~
-%patch18 -p0 -b .pr60010~
+%patch15 -p0 -b .pr28865~
+%patch16 -p0 -b .libgo-p224~
+rm -rf libgo/go/crypto/elliptic/p224{,_test}.go
+%patch17 -p0 -b .pr60010~
 %ifarch aarch64
-%patch19 -p0 -b .aarch64-ada~
+%patch18 -p0 -b .aarch64-ada~
 %endif
-%patch20 -p0 -b .aarch64-async-unw-tables~
-%patch21 -p0 -b .aarch64-unwind-opt~
-%patch22 -p0 -b .pr63341~
-%patch23 -p0 -b .pr63284~
-%patch24 -p0 -b .test-compat-Wno-abi~
-%patch25 -p1 -b .for~
-%patch26 -p1 -b .buildfix~
+%patch19 -p0 -b .aarch64-async-unw-tables~
+%patch20 -p0 -b .aarch64-unwind-opt~
+%patch21 -p0 -b rh1243366~
+%patch100 -p1 -b .dec~
+%patch101 -p1 -b .for_version~
 
 %if 0%{?_enable_debug_packages}
 cat > split-debuginfo.sh <<\EOF

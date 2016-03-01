@@ -1,0 +1,11 @@
+--- a/gcc/Makefile.in	2016-03-01 11:08:18.823052793 -0500
++++ b/gcc/Makefile.in	2016-03-01 11:08:37.504230522 -0500
+@@ -2031,7 +2031,7 @@
+   -DSTANDARD_STARTFILE_PREFIX=\"$(unlibsubdir)/\" \
+   -DSTANDARD_EXEC_PREFIX=\"$(libdir)/gcc/\" \
+   -DSTANDARD_LIBEXEC_PREFIX=\"$(libexecdir)/gcc/\" \
+-  -DDEFAULT_TARGET_VERSION=\"$(version)\" \
++  -DDEFAULT_TARGET_VERSION=\"$(version)-for\" \
+   -DDEFAULT_TARGET_MACHINE=\"$(target_noncanonical)\" \
+   -DSTANDARD_BINDIR_PREFIX=\"$(bindir)/\" \
+   -DTOOLDIR_BASE_PREFIX=\"$(libsubdir_to_prefix)$(prefix_to_exec_prefix)\" \
