@@ -175,7 +175,7 @@ index 3bc3b96..a4e217f 100644
  
  	* GCC 4.8.3 released.
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
-index c9520f6..9c9908f 100644
+index c9520f6..1984771 100644
 --- a/gcc/fortran/check.c
 +++ b/gcc/fortran/check.c
 @@ -203,6 +203,25 @@ double_check (gfc_expr *d, int n)
@@ -227,7 +227,7 @@ index c9520f6..9c9908f 100644
  gfc_check_kind (gfc_expr *x)
  {
 -  if (x->ts.type == BT_DERIVED)
-+  if (gfc_bt_struct (x->ts.type))
++  if (gfc_bt_struct (x->ts.type) || x->ts.type == BT_CLASS)
      {
        gfc_error ("'%s' argument of '%s' intrinsic at %L must be a "
  		 "non-derived type", gfc_current_intrinsic_arg[0]->name,
@@ -7589,7 +7589,7 @@ index a94ae21..8a3e485 100644
  
    expr = gfc_get_expr ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index c16e3d0..55bc443 100644
+index c16e3d0..abf65c5 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -520,7 +520,7 @@ static void
@@ -8135,7 +8135,7 @@ index c16e3d0..55bc443 100644
 -  for (; comp1; comp1 = comp1->next, comp2 = comp2->next)
 -    {
 -      bool inout = false;
- 
+-
 -      /* The intrinsic assignment does the right thing for pointers
 -	 of all kinds and allocatable components.  */
 -      if (comp1->ts.type != BT_DERIVED
@@ -8173,7 +8173,7 @@ index c16e3d0..55bc443 100644
 -	      this_code = NULL;
 -	      continue;
 -	    }
--
+ 
 -	  /* If the first argument of the subroutine has intent INOUT
 -	     a temporary must be generated and used instead.  */
 -	  rsym = this_code->resolved_sym;
@@ -8588,7 +8588,7 @@ index c16e3d0..55bc443 100644
  	  || c->attr.pointer
  	  || c->attr.allocatable
  	  || c->attr.proc_pointer_comp
-@@ -12580,402 +12610,440 @@ check_defined_assignments (gfc_symbol *derived)
+@@ -12580,402 +12610,459 @@ check_defined_assignments (gfc_symbol *derived)
      }
  }
  
@@ -8688,7 +8688,10 @@ index c16e3d0..55bc443 100644
 -	}
 +      if (!sym->attr.vtype
 +          && check_proc_interface (ifc, &c->loc) == FAILURE)
-+        return FAILURE;
++        {
++          c->tb->error = 1;
++          return FAILURE;
++        }
  
 -      /* F2008, C442.  */
 -      if ((!sym->attr.is_class || c != sym->components)
@@ -8748,7 +8751,10 @@ index c16e3d0..55bc443 100644
 +              gfc_charlen *cl = gfc_new_charlen (sym->ns, ifc->ts.u.cl);
 +              if (cl->length && !cl->resolved
 +                  && gfc_resolve_expr (cl->length) == FAILURE)
-+                return FAILURE;
++                {
++                  c->tb->error = 1;
++                  return FAILURE;
++                }
 +              c->ts.u.cl = cl;
 +            }
 +        }
@@ -8948,8 +8954,11 @@ index c16e3d0..55bc443 100644
 -		  c->tb->pass_arg_num++;
 -		}
 +      if (gfc_type_is_extensible (sym) && me_arg->ts.type != BT_CLASS)
-+        gfc_error ("Non-polymorphic passed-object dummy argument of '%s'"
-+                   " at %L", c->name, &c->loc);
++        {
++          gfc_error ("Non-polymorphic passed-object dummy argument of '%s'"
++                     " at %L", c->name, &c->loc);
++          return FAILURE;
++        }
  
 -	      if (!me_arg)
 -		{
@@ -9291,6 +9300,7 @@ index c16e3d0..55bc443 100644
 +resolve_fl_union (gfc_symbol *sym)
 +{
 +  gfc_component *map;
++  gfc_try success;
  
 -      /* Ensure that all the derived type components are put on the
 -	 derived type list; even in formal namespaces, where derived type
@@ -9307,15 +9317,19 @@ index c16e3d0..55bc443 100644
 -					   || c->attr.proc_pointer
 -					   || c->attr.allocatable)) == FAILURE)
 -	return FAILURE;
++  success = SUCCESS;
 +  for (map = sym->components; map; map = map->next)
 +  {
 +    if (resolve_component (map, (void *)sym) == FAILURE)
-+      return FAILURE;
++      success = FAILURE;
 +  }
  
 -      if (c->initializer && !sym->attr.vtype
 -	  && gfc_check_assign_symbol (sym, c, c->initializer) == FAILURE)
 -	return FAILURE;
++  if (success != SUCCESS)
++    return FAILURE;
++
 +  if (sym->components)
 +    add_dt_to_dt_list (sym);
 +
@@ -9331,6 +9345,7 @@ index c16e3d0..55bc443 100644
 +{
 +  gfc_symbol* super_type;
 +  gfc_component *c;
++  gfc_try success;
 +
 +  if (sym->attr.unlimited_polymorphic)
 +    return SUCCESS;
@@ -9344,8 +9359,8 @@ index c16e3d0..55bc443 100644
 +		 "parent type '%s' shall also have one", sym->name,
 +		 &sym->declared_at, super_type->name);
 +      return FAILURE;
-     }
- 
++    }
++
 +  /* Ensure the extended type gets resolved before we do.  */
 +  if (super_type && resolve_fl_derived0 (super_type) == FAILURE)
 +    return FAILURE;
@@ -9356,22 +9371,26 @@ index c16e3d0..55bc443 100644
 +      gfc_error ("Non-extensible derived-type '%s' at %L must not be ABSTRACT",
 +		 sym->name, &sym->declared_at);
 +      return FAILURE;
-+    }
-+
+     }
+ 
 +  c = (sym->attr.is_class) ? sym->components->ts.u.derived->components
 +			   : sym->components;
 +
 +  /* Resolve all components of this type. */
++  success = SUCCESS;
 +  for (; c; c = c->next)
 +  {
 +    if (resolve_component (c, (void *)sym) == FAILURE)
-+      return FAILURE;
++      success = FAILURE;
 +  }
++
++  if (success != SUCCESS)
++    return FAILURE;
 +
    check_defined_assignments (sym);
  
    if (!sym->attr.defined_assign_comp && super_type)
-@@ -13037,8 +13105,8 @@ resolve_fl_derived (gfc_symbol *sym)
+@@ -13037,8 +13124,8 @@ resolve_fl_derived (gfc_symbol *sym)
    if (sym->attr.is_class && sym->ts.u.derived == NULL)
      {
        /* Fix up incomplete CLASS symbols.  */
@@ -9382,7 +9401,7 @@ index c16e3d0..55bc443 100644
  
        /* Nothing more to do for unlimited polymorphic entities.  */
        if (data->ts.u.derived->attr.unlimited_polymorphic)
-@@ -13259,6 +13327,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13259,6 +13346,11 @@ resolve_symbol (gfc_symbol *sym)
      return;
    sym->resolved = 1;
  
@@ -9394,7 +9413,7 @@ index c16e3d0..55bc443 100644
    if (sym->attr.artificial)
      return;
  
-@@ -13327,7 +13400,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13327,7 +13419,11 @@ resolve_symbol (gfc_symbol *sym)
        return;
      }
  
@@ -9407,7 +9426,7 @@ index c16e3d0..55bc443 100644
      return;
  
    /* Symbols that are module procedures with results (functions) have
-@@ -13547,7 +13624,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13547,7 +13643,7 @@ resolve_symbol (gfc_symbol *sym)
       interoperability when a variable is declared of that type.  */
    if (sym->attr.is_bind_c && sym->attr.implicit_type == 0 &&
        sym->attr.use_assoc == 0 && sym->attr.dummy == 0 &&
@@ -9416,7 +9435,7 @@ index c16e3d0..55bc443 100644
      {
        gfc_try t = SUCCESS;
  
-@@ -13723,7 +13800,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13723,7 +13819,7 @@ resolve_symbol (gfc_symbol *sym)
    if (class_attr.codimension
        && !(class_attr.allocatable || sym->attr.dummy || sym->attr.save
  	   || sym->attr.select_type_temporary
@@ -9425,7 +9444,7 @@ index c16e3d0..55bc443 100644
  	   || sym->ns->proc_name->attr.flavor == FL_MODULE
  	   || sym->ns->proc_name->attr.is_main_program
  	   || sym->attr.function || sym->attr.result || sym->attr.use_assoc))
-@@ -13861,7 +13938,8 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13861,7 +13957,8 @@ resolve_symbol (gfc_symbol *sym)
      }
  
    /* Check threadprivate restrictions.  */
@@ -9435,7 +9454,7 @@ index c16e3d0..55bc443 100644
        && (!sym->attr.in_common
  	  && sym->module == NULL
  	  && (sym->ns->proc_name == NULL
-@@ -13875,16 +13953,16 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13875,16 +13972,16 @@ resolve_symbol (gfc_symbol *sym)
        && !sym->value
        && !sym->attr.allocatable
        && !sym->attr.alloc_comp)
@@ -9462,7 +9481,7 @@ index c16e3d0..55bc443 100644
  
    if (sym->ts.type == BT_CLASS && sym->ns == gfc_current_ns
        && sym->attr.dummy && sym->attr.intent == INTENT_OUT
-@@ -14479,8 +14557,7 @@ sequence_type (gfc_typespec ts)
+@@ -14479,8 +14576,7 @@ sequence_type (gfc_typespec ts)
  
    switch (ts.type)
    {
@@ -9472,7 +9491,7 @@ index c16e3d0..55bc443 100644
        if (ts.u.derived->components == NULL)
  	return SEQ_NONDEFAULT;
  
-@@ -14566,7 +14643,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
+@@ -14566,7 +14662,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
  
    for (; c ; c = c->next)
      {

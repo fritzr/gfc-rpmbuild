@@ -180,7 +180,7 @@ Patch19: gcc48-aarch64-async-unw-tables.patch
 Patch20: gcc48-aarch64-unwind-opt.patch
 Patch21: gcc48-rh1243366.patch
 
-Patch100: gcc48-for-%{for_patch_version}-4_8_5.patch
+Patch100: gcc48-for-%{for_patch_version}.patch
 Patch101: gcc48-for-version-hack.patch
 
 Patch1100: isl-%{isl_version}-aarch64-config.patch
