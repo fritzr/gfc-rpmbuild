@@ -3153,10 +3153,10 @@ index 4f9008d..f98b3e6 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 2d73942..474a631 100644
+index 2d73942..639d34e 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
-@@ -383,19 +383,138 @@ gfc_match_end_interface (void)
+@@ -383,19 +383,139 @@ gfc_match_end_interface (void)
  }
  
  
@@ -3244,7 +3244,8 @@ index 2d73942..474a631 100644
 +         the same component, because one map field is created with its type
 +         declaration. Therefore don't worry about recursion here. */
 +      /* TODO: worry about recursion into parent types of the unions? */
-+      if (compare_components (cmp1, cmp2) == 0)
++      if (compare_components (cmp1, cmp2,
++            map1->ts.u.derived, map2->ts.u.derived) == 0)
 +        return 0;
 +
 +      cmp1 = cmp1->next;
@@ -3296,7 +3297,7 @@ index 2d73942..474a631 100644
    /* Special case for comparing derived types across namespaces.  If the
       true names and module names are the same and the module name is
       nonnull, then they are equal.  */
-@@ -404,12 +523,12 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -404,12 +524,12 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && strcmp (derived1->module, derived2->module) == 0)
      return 1;
  
@@ -3312,7 +3313,7 @@ index 2d73942..474a631 100644
    if (derived1->component_access == ACCESS_PRIVATE
        || derived2->component_access == ACCESS_PRIVATE)
      return 0;
-@@ -418,53 +537,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -418,53 +538,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && !(derived1->attr.is_bind_c && derived2->attr.is_bind_c))
      return 0;
  
@@ -3358,7 +3359,7 @@ index 2d73942..474a631 100644
 -	    && gfc_compare_types (&dt1->ts, &dt2->ts) == 0)
 +      if (     !(cmp1->ts.type == BT_DERIVED && derived1 == cmp1->ts.u.derived)
 +            && !(cmp2->ts.type == BT_DERIVED && derived2 == cmp2->ts.u.derived)
-+            && compare_components (cmp1, cmp2) == 0)
++            && compare_components (cmp1, cmp2, derived1, derived2) == 0)
  	return 0;
  
 -      else if ((dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
@@ -3386,7 +3387,7 @@ index 2d73942..474a631 100644
  	return 0;
      }
  
-@@ -494,10 +602,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -494,10 +603,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
        && (ts1->u.derived->attr.sequence || ts1->u.derived->attr.is_bind_c))
      return 1;
  
@@ -3403,7 +3404,7 @@ index 2d73942..474a631 100644
    if (ts1->type != BT_DERIVED && ts1->type != BT_CLASS)
      return (ts1->kind == ts2->kind);
  
-@@ -505,7 +617,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -505,7 +618,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
    if (gfc_type_compatible (ts1, ts2))
      return 1;
  
@@ -3412,7 +3413,7 @@ index 2d73942..474a631 100644
  }
  
  
-@@ -1467,7 +1579,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1467,7 +1580,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  	 functions or subroutines.  */
        if (((!p->sym->attr.function && !p->sym->attr.subroutine)
  	   || !p->sym->attr.if_source)
@@ -3421,7 +3422,7 @@ index 2d73942..474a631 100644
  	{
  	  if (p->sym->attr.external)
  	    gfc_error ("Procedure '%s' in %s at %L has no explicit interface",
-@@ -1481,17 +1593,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1481,17 +1594,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  
        /* Verify that procedures are either all SUBROUTINEs or all FUNCTIONs.  */
        if ((psave->sym->attr.function && !p->sym->attr.function
@@ -3446,7 +3447,7 @@ index 2d73942..474a631 100644
  	  return 1;
  	}
  
-@@ -1548,8 +1664,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
+@@ -1548,8 +1665,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
  	if (p->sym->name == q->sym->name && p->sym->module == q->sym->module)
  	  continue;
  
@@ -3457,7 +3458,7 @@ index 2d73942..474a631 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2463,7 +2579,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2463,7 +2580,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	  return 0;
  	}
  
@@ -3467,7 +3468,7 @@ index 2d73942..474a631 100644
  	goto match;
  
        if (f->sym == NULL)
-@@ -2514,7 +2631,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2514,7 +2632,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
        if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
@@ -3476,7 +3477,7 @@ index 2d73942..474a631 100644
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3445,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3446,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {

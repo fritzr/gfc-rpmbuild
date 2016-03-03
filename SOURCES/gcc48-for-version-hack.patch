@@ -1,3 +1,80 @@
+--- a/config/gxx-include-dir.m4	2016-03-02 18:30:19.039036516 -0500
++++ b/config/gxx-include-dir.m4	2016-03-02 18:30:37.231190983 -0500
+@@ -16,7 +16,7 @@
+     case "${enable_version_specific_runtime_libs}" in
+       yes) gxx_include_dir='$(libsubdir)/include/c++' ;;
+       *)
+-	libstdcxx_incdir='c++/$(gcc_version)'
++	libstdcxx_incdir='c++/$(gcc_version)-for'
+ 	gxx_include_dir='include/$(libstdcxx_incdir)'
+ 	if test -n "$with_cross_host" && 
+            test x"$with_cross_host" != x"no"; then	
+--- a/libstdc++-v3/configure	2016-03-02 20:58:27.871037834 -0500
++++ b/libstdc++-v3/configure	2016-03-02 20:59:06.878380696 -0500
+@@ -73092,7 +73092,7 @@
+ 
+   # Default case for install directory for include files.
+   if test $version_specific_libs = no && test $gxx_include_dir = no; then
+-    gxx_include_dir='include/c++/${gcc_version}'
++    gxx_include_dir='include/c++/${gcc_version}-for'
+     if test -n "$with_cross_host" &&
+        test x"$with_cross_host" != x"no"; then
+       gxx_include_dir='${prefix}/${target_alias}/'"$gxx_include_dir"
+@@ -73108,7 +73108,7 @@
+     # is selected.  FIXME: these variables are misnamed, there are
+     # no executables installed in _toolexecdir or _toolexeclibdir.
+     if test x"$gxx_include_dir" = x"no"; then
+-      gxx_include_dir='${libdir}/gcc/${host_alias}/${gcc_version}/include/c++'
++      gxx_include_dir='${libdir}/gcc/${host_alias}/${gcc_version}-for/include/c++'
+     fi
+     glibcxx_toolexecdir='${libdir}/gcc/${host_alias}'
+     glibcxx_toolexeclibdir='${toolexecdir}/${gcc_version}$(MULTISUBDIR)'
+--- a/libstdc++-v3/acinclude.m4	2016-03-01 16:43:18.285333122 -0500
++++ b/libstdc++-v3/acinclude.m4	2016-03-01 16:43:58.589693571 -0500
+@@ -815,7 +815,7 @@
+ 
+   # Default case for install directory for include files.
+   if test $version_specific_libs = no && test $gxx_include_dir = no; then
+-    gxx_include_dir='include/c++/${gcc_version}'
++    gxx_include_dir='include/c++/${gcc_version}-for'
+     if test -n "$with_cross_host" &&
+        test x"$with_cross_host" != x"no"; then
+       gxx_include_dir='${prefix}/${target_alias}/'"$gxx_include_dir"
+@@ -831,10 +831,10 @@
+     # is selected.  FIXME: these variables are misnamed, there are
+     # no executables installed in _toolexecdir or _toolexeclibdir.
+     if test x"$gxx_include_dir" = x"no"; then
+-      gxx_include_dir='${libdir}/gcc/${host_alias}/${gcc_version}/include/c++'
++      gxx_include_dir='${libdir}/gcc/${host_alias}/${gcc_version}-for/include/c++'
+     fi
+     glibcxx_toolexecdir='${libdir}/gcc/${host_alias}'
+-    glibcxx_toolexeclibdir='${toolexecdir}/${gcc_version}$(MULTISUBDIR)'
++    glibcxx_toolexeclibdir='${toolexecdir}/${gcc_version}-for$(MULTISUBDIR)'
+   fi
+ 
+   # Calculate glibcxx_toolexecdir, glibcxx_toolexeclibdir
+--- a/gcc/configure.ac	2016-03-02 19:23:14.276029092 -0500
++++ b/gcc/configure.ac	2016-03-02 19:23:37.122224513 -0500
+@@ -136,7 +136,7 @@
+   if test x${enable_version_specific_runtime_libs} = xyes; then
+     gcc_gxx_include_dir='${libsubdir}/include/c++'
+   else
+-    libstdcxx_incdir='include/c++/$(version)'
++    libstdcxx_incdir='include/c++/$(version)-for'
+     if test x$host != x$target; then
+        libstdcxx_incdir="$target_alias/$libstdcxx_incdir"
+     fi
+--- a/gcc/configure	2016-03-02 20:54:53.696145477 -0500
++++ b/gcc/configure	2016-03-02 20:55:10.302296541 -0500
+@@ -3319,7 +3319,7 @@
+   if test x${enable_version_specific_runtime_libs} = xyes; then
+     gcc_gxx_include_dir='${libsubdir}/include/c++'
+   else
+-    libstdcxx_incdir='include/c++/$(version)'
++    libstdcxx_incdir='include/c++/$(version)-for'
+     if test x$host != x$target; then
+        libstdcxx_incdir="$target_alias/$libstdcxx_incdir"
+     fi
 --- a/gcc/Makefile.in	2016-03-01 11:08:18.823052793 -0500
 +++ b/gcc/Makefile.in	2016-03-01 11:08:37.504230522 -0500
 @@ -2031,7 +2031,7 @@
@@ -9,3 +86,16 @@
    -DDEFAULT_TARGET_MACHINE=\"$(target_noncanonical)\" \
    -DSTANDARD_BINDIR_PREFIX=\"$(bindir)/\" \
    -DTOOLDIR_BASE_PREFIX=\"$(libsubdir_to_prefix)$(prefix_to_exec_prefix)\" \
+--- a/gcc/Makefile.in	2016-03-01 15:48:21.575469317 -0500
++++ b/gcc/Makefile.in	2016-03-01 15:49:38.041200273 -0500
+@@ -4005,8 +4005,8 @@
+ # Remake cpp.
+ 
+ PREPROCESSOR_DEFINES = \
+-  -DGCC_INCLUDE_DIR=\"$(libsubdir)/include\" \
+-  -DFIXED_INCLUDE_DIR=\"$(libsubdir)/include-fixed\" \
++  -DGCC_INCLUDE_DIR=\"$(libsubdir)-for/include\" \
++  -DFIXED_INCLUDE_DIR=\"$(libsubdir)-for/include-fixed\" \
+   -DGPLUSPLUS_INCLUDE_DIR=\"$(gcc_gxx_include_dir)\" \
+   -DGPLUSPLUS_INCLUDE_DIR_ADD_SYSROOT=$(gcc_gxx_include_dir_add_sysroot) \
+   -DGPLUSPLUS_TOOL_INCLUDE_DIR=\"$(gcc_gxx_include_dir)/$(target_noncanonical)\" \
