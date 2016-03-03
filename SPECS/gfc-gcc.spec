@@ -1441,6 +1441,18 @@ if [ %{_lib} = lib64 ]; then
   rmdir %{buildroot}%{_prefix}/lib64
 fi
 
+# Place an entry in the ld library cache so users don't have to mess with their
+# runtime library configuration.
+mkdir -p %{buildroot}/etc/ld.conf.d
+echo "buildroot is %{buildroot}"
+echo "program prefix is %{program_prefix}"
+cat > %{buildroot}/etc/ld.conf.d/%{program_prefix}gcc-%{_arch} <<EOF
+%ifarch %{multilib_64_archs}
+%{_prefix}/lib64/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%endif
+%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+EOF
+
 %check
 cd obj-%{gcc_target_platform}
 
@@ -1849,6 +1861,8 @@ fi
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgcc_s*.so*
 %doc gcc/COPYING* COPYING.RUNTIME
+%dir /etc/ld.conf.d
+/etc/ld.conf.d/%{program_prefix}gcc-%{_arch}
 
 %files -n %{program_prefix}c++
 %defattr(-,root,root,-)
