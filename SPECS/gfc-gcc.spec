@@ -1,9 +1,11 @@
-%global gcc_version 4.8.3
-%global gcc_version_full 4.8.3-for
+%global DATE 20150702
+%global SVNREV 225304
+%global gcc_version 4.8.5
+%global gcc_version_full 4.8.5-for
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 10
-%global for_patch_version 0010
+%global gcc_release 11
+%global for_patch_version 0011
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
 %global _performance_build 1
@@ -64,7 +66,7 @@ Release: %{gcc_release}%{?dist}
 License: GPLv3+ and GPLv3+ with exceptions and GPLv2+ with exceptions and LGPLv2+ and BSD
 Group: Development/Languages
 #Source0: ftp://gcc.gnu.org/pub/gcc/releases/gcc-%{version}.tar.bz2
-Source0: gcc-%{version}.tar.bz2
+Source0: gcc-%{version}-%{DATE}.tar.bz2
 %global isl_version 0.11.1
 %global cloog_version 0.18.0
 %if %{build_cloog}
@@ -147,8 +149,8 @@ Requires: glibc >= 2.3.90-35
 Requires: glibc >= 2.16
 %endif
 %endif
-Requires: libgcc >= %{version}-%{release}
-Requires: libgomp = %{version}-%{release}
+Requires: %{program_prefix}libgcc >= %{version}-%{release}
+Requires: %{program_prefix}libgomp = %{version}-%{release}
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 AutoReq: true
@@ -169,14 +171,22 @@ Patch10: gcc48-pr38757.patch
 Patch11: gcc48-libstdc++-docs.patch
 Patch12: gcc48-no-add-needed.patch
 Patch13: gcc48-pr56564.patch
-Patch14: gcc48-pr56493.patch
-Patch15: gcc48-color-auto.patch
-Patch16: gcc48-pr28865.patch
-Patch17: gcc48-libgo-p224.patch
-Patch18: gcc48-pr60010.patch
-Patch19: gcc48-for-%{for_patch_version}.patch
-Patch20: gcc48-make.patch
+Patch14: gcc48-color-auto.patch
+Patch15: gcc48-pr28865.patch
+Patch16: gcc48-libgo-p224.patch
+Patch17: gcc48-pr60010.patch
+Patch18: gcc48-aarch64-ada.patch
+Patch19: gcc48-aarch64-async-unw-tables.patch
+Patch20: gcc48-aarch64-unwind-opt.patch
+Patch21: gcc48-rh1243366.patch
 
+Patch100: gcc48-for-%{for_patch_version}-4_8_5.patch
+Patch101: gcc48-for-version-hack.patch
+
+Patch1100: isl-%{isl_version}-aarch64-config.patch
+Patch1101: isl-%{isl_version}-ppc64le-config.patch
+
+Patch1200: cloog-%{cloog_version}-ppc64le-config.patch
 
 # On ARM EABI systems, we do want -gnueabi to be part of the
 # target triple.
@@ -197,12 +207,12 @@ Patch20: gcc48-make.patch
 The gcc package contains the GNU Compiler Collection version 4.8.
 You'll need this package in order to compile C code.
 
-%package -n libgcc
+%package -n %{program_prefix}libgcc
 Summary: GCC version 4.8 shared support library
 Group: System Environment/Libraries
 Autoreq: false
 
-%description -n libgcc
+%description -n %{program_prefix}libgcc
 This package contains GCC shared support library which is needed
 e.g. for exception handling support.
 
@@ -210,8 +220,8 @@ e.g. for exception handling support.
 Summary: C++ support for GCC
 Group: Development/Languages
 Requires: %{program_prefix}gcc = %{version}-%{release}
-Requires: libstdc++ = %{version}-%{release}
-Requires: libstdc++-devel = %{version}-%{release}
+Requires: %{program_prefix}libstdc++ = %{version}-%{release}
+Requires: %{program_prefix}libstdc++-devel = %{version}-%{release}
 Autoreq: true
 
 %description -n %{program_prefix}c++
@@ -219,42 +229,42 @@ This package adds C++ support to the GNU Compiler Collection.
 It includes support for most of the current C++ specification,
 including templates and exception handling.
 
-%package -n libstdc++
+%package -n %{program_prefix}libstdc++
 Summary: GNU Standard C++ Library
 Group: System Environment/Libraries
 Autoreq: true
 Requires: glibc >= 2.10.90-7
 
-%description -n libstdc++
+%description -n %{program_prefix}libstdc++
 The libstdc++ package contains a rewritten standard compliant GCC Standard
 C++ Library.
 
-%package -n libstdc++-devel
+%package -n %{program_prefix}libstdc++-devel
 Summary: Header files and libraries for C++ development
 Group: Development/Libraries
-Requires: libstdc++%{?_isa} = %{version}-%{release}
+Requires: %{program_prefix}libstdc++%{?_isa} = %{version}-%{release}
 Autoreq: true
 
-%description -n libstdc++-devel
+%description -n %{program_prefix}libstdc++-devel
 This is the GNU implementation of the standard C++ libraries.  This
 package includes the header files and libraries needed for C++
 development. This includes rewritten implementation of STL.
 
-%package -n libstdc++-static
+%package -n %{program_prefix}libstdc++-static
 Summary: Static libraries for the GNU standard C++ library
 Group: Development/Libraries
-Requires: libstdc++-devel = %{version}-%{release}
+Requires: %{program_prefix}libstdc++-devel = %{version}-%{release}
 Autoreq: true
 
-%description -n libstdc++-static
+%description -n %{program_prefix}libstdc++-static
 Static libraries for the GNU standard C++ library.
 
-%package -n libstdc++-docs
+%package -n %{program_prefix}libstdc++-docs
 Summary: Documentation for the GNU standard C++ library
 Group: Development/Libraries
 Autoreq: true
 
-%description -n libstdc++-docs
+%description -n %{program_prefix}libstdc++-docs
 Manual, doxygen generated API information and Frequently Asked Questions
 for the GNU standard C++ library.
 
@@ -262,10 +272,10 @@ for the GNU standard C++ library.
 Summary: Fortran support
 Group: Development/Languages
 Requires: %{program_prefix}gcc = %{version}-%{release}
-Requires: libgfortran = %{version}-%{release}
+Requires: %{program_prefix}libgfortran = %{version}-%{release}
 %if %{build_libquadmath}
-Requires: libquadmath = %{version}-%{release}
-Requires: libquadmath-devel = %{version}-%{release}
+Requires: %{program_prefix}libquadmath = %{version}-%{release}
+Requires: %{program_prefix}libquadmath-devel = %{version}-%{release}
 %endif
 %if !%{build_gmp}
 BuildRequires: gmp-devel >= 4.1.2-8
@@ -284,180 +294,180 @@ Autoreq: true
 The %{program_prefix}gfortran package provides support for compiling DEC Fortran
 programs with the GNU Compiler Collection.
 
-%package -n libgfortran
+%package -n %{program_prefix}libgfortran
 Summary: Fortran runtime
 Group: System Environment/Libraries
 Autoreq: true
 %if %{build_libquadmath}
-Requires: libquadmath = %{version}-%{release}
+Requires: %{program_prefix}libquadmath = %{version}-%{release}
 %endif
 
-%description -n libgfortran
+%description -n %{program_prefix}libgfortran
 This package contains Fortran shared library which is needed to run
 Fortran dynamically linked programs.
 
-%package -n libgfortran-static
+%package -n %{program_prefix}libgfortran-static
 Summary: Static Fortran libraries
 Group: Development/Libraries
-Requires: libgfortran = %{version}-%{release}
+Requires: %{program_prefix}libgfortran = %{version}-%{release}
 Requires: %{program_prefix}gcc = %{version}-%{release}
 %if %{build_libquadmath}
-Requires: libquadmath-static = %{version}-%{release}
+Requires: %{program_prefix}libquadmath-static = %{version}-%{release}
 %endif
 
-%description -n libgfortran-static
+%description -n %{program_prefix}libgfortran-static
 This package contains static Fortran libraries.
 
-%package -n libgomp
+%package -n %{program_prefix}libgomp
 Summary: GCC OpenMP v3.0 shared support library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libgomp
+%description -n %{program_prefix}libgomp
 This package contains GCC shared support library which is needed
 for OpenMP v3.0 support.
 
-%package -n libmudflap
+%package -n %{program_prefix}libmudflap
 Summary: GCC mudflap shared support library
 Group: System Environment/Libraries
 
-%description -n libmudflap
+%description -n %{program_prefix}libmudflap
 This package contains GCC shared support library which is needed
 for mudflap support.
 
-%package -n libmudflap-devel
+%package -n %{program_prefix}libmudflap-devel
 Summary: GCC mudflap support
 Group: Development/Libraries
-Requires: libmudflap = %{version}-%{release}
+Requires: %{program_prefix}libmudflap = %{version}-%{release}
 Requires: %{program_prefix}gcc = %{version}-%{release}
 
-%description -n libmudflap-devel
+%description -n %{program_prefix}libmudflap-devel
 This package contains headers for building mudflap-instrumented programs.
 
 To instrument a non-threaded program, add -fmudflap
 option to GCC and when linking add -lmudflap, for threaded programs
 also add -fmudflapth and -lmudflapth.
 
-%package -n libmudflap-static
+%package -n %{program_prefix}libmudflap-static
 Summary: Static libraries for mudflap support
 Group: Development/Libraries
-Requires: libmudflap-devel = %{version}-%{release}
+Requires: %{program_prefix}libmudflap-devel = %{version}-%{release}
 
-%description -n libmudflap-static
+%description -n %{program_prefix}libmudflap-static
 This package contains static libraries for building mudflap-instrumented
 programs.
 
-%package -n libquadmath
+%package -n %{program_prefix}libquadmath
 Summary: GCC __float128 shared support library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libquadmath
+%description -n %{program_prefix}libquadmath
 This package contains GCC shared support library which is needed
 for __float128 math support and for Fortran REAL*16 support.
 
-%package -n libquadmath-devel
+%package -n %{program_prefix}libquadmath-devel
 Summary: GCC __float128 support
 Group: Development/Libraries
-Requires: libquadmath = %{version}-%{release}
+Requires: %{program_prefix}libquadmath = %{version}-%{release}
 Requires: %{program_prefix}gcc = %{version}-%{release}
 
-%description -n libquadmath-devel
+%description -n %{program_prefix}libquadmath-devel
 This package contains headers for building Fortran programs using
 REAL*16 and programs using __float128 math.
 
-%package -n libquadmath-static
+%package -n %{program_prefix}libquadmath-static
 Summary: Static libraries for __float128 support
 Group: Development/Libraries
-Requires: libquadmath-devel = %{version}-%{release}
+Requires: %{program_prefix}libquadmath-devel = %{version}-%{release}
 
-%description -n libquadmath-static
+%description -n %{program_prefix}libquadmath-static
 This package contains static libraries for building Fortran programs
 using REAL*16 and programs using __float128 math.
 
-%package -n libitm
+%package -n %{program_prefix}libitm
 Summary: The GNU Transactional Memory library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libitm
+%description -n %{program_prefix}libitm
 This package contains the GNU Transactional Memory library
 which is a GCC transactional memory support runtime library.
 
-%package -n libitm-devel
+%package -n %{program_prefix}libitm-devel
 Summary: The GNU Transactional Memory support
 Group: Development/Libraries
-Requires: libitm = %{version}-%{release}
+Requires: %{program_prefix}libitm = %{version}-%{release}
 Requires: %{program_prefix}gcc = %{version}-%{release}
 
-%description -n libitm-devel
+%description -n %{program_prefix}libitm-devel
 This package contains headers and support files for the
 GNU Transactional Memory library.
 
-%package -n libitm-static
+%package -n %{program_prefix}libitm-static
 Summary: The GNU Transactional Memory static library
 Group: Development/Libraries
-Requires: libitm-devel = %{version}-%{release}
+Requires: %{program_prefix}libitm-devel = %{version}-%{release}
 
-%description -n libitm-static
+%description -n %{program_prefix}libitm-static
 This package contains GNU Transactional Memory static libraries.
 
-%package -n libatomic
+%package -n %{program_prefix}libatomic
 Summary: The GNU Atomic library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libatomic
+%description -n %{program_prefix}libatomic
 This package contains the GNU Atomic library
 which is a GCC support runtime library for atomic operations not supported
 by hardware.
 
-%package -n libatomic-static
+%package -n %{program_prefix}libatomic-static
 Summary: The GNU Atomic static library
 Group: Development/Libraries
-Requires: libatomic = %{version}-%{release}
+Requires: %{program_prefix}libatomic = %{version}-%{release}
 
-%description -n libatomic-static
+%description -n %{program_prefix}libatomic-static
 This package contains GNU Atomic static libraries.
 
-%package -n libasan
+%package -n %{program_prefix}libasan
 Summary: The Address Sanitizer runtime library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libasan
+%description -n %{program_prefix}libasan
 This package contains the Address Sanitizer library
 which is used for -fsanitize=address instrumented programs.
 
-%package -n libasan-static
+%package -n %{program_prefix}libasan-static
 Summary: The Address Sanitizer static library
 Group: Development/Libraries
-Requires: libasan = %{version}-%{release}
+Requires: %{program_prefix}libasan = %{version}-%{release}
 
-%description -n libasan-static
+%description -n %{program_prefix}libasan-static
 This package contains Address Sanitizer static runtime library.
 
-%package -n libtsan
+%package -n %{program_prefix}libtsan
 Summary: The Thread Sanitizer runtime library
 Group: System Environment/Libraries
 Requires(post): /sbin/install-info
 Requires(preun): /sbin/install-info
 
-%description -n libtsan
+%description -n %{program_prefix}libtsan
 This package contains the Thread Sanitizer library
 which is used for -fsanitize=thread instrumented programs.
 
-%package -n libtsan-static
+%package -n %{program_prefix}libtsan-static
 Summary: The Thread Sanitizer static library
 Group: Development/Libraries
-Requires: libtsan = %{version}-%{release}
+Requires: %{program_prefix}libtsan = %{version}-%{release}
 
-%description -n libtsan-static
+%description -n %{program_prefix}libtsan-static
 This package contains Thread Sanitizer static runtime library.
 
 %package -n %{program_prefix}cpp
@@ -504,8 +514,8 @@ not stable, so plugins must be rebuilt any time GCC is updated.
 %define debug_package %{nil}
 %global __debug_package 1
 %global __debug_install_post \
-   %{_rpmconfigdir}/find-debuginfo.sh %{?_missing_build_ids_terminate_build:--strict-build-id} %{?_find_debuginfo_opts} "%{_builddir}/gcc-%{version}"\
-    %{_builddir}/gcc-%{version}/split-debuginfo.sh\
+   %{_rpmconfigdir}/find-debuginfo.sh %{?_missing_build_ids_terminate_build:--strict-build-id} %{?_find_debuginfo_opts} "%{_builddir}/gcc-%{version}-%{DATE}"\
+    %{_builddir}/gcc-%{version}-%{DATE}/split-debuginfo.sh\
 %{nil}
 
 %package debuginfo
@@ -522,26 +532,26 @@ package or when debugging this package.
 %files debuginfo -f debugfiles.list
 %defattr(-,root,root)
 
-%package base-debuginfo
+%package -n %{program_prefix}base-debuginfo
 Summary: Debug information for libraries from package %{name}
 Group: Development/Debug
 AutoReqProv: 0
 
-%description base-debuginfo
+%description -n %{program_prefix}base-debuginfo
 This package provides debug information for libgcc_s, libgomp and
 libstdc++ libraries from package %{name}.
 Debug information is useful when developing applications that use this
 package or when debugging this package.
 
-%files base-debuginfo -f debugfiles-base.list
+%files -n %{program_prefix}base-debuginfo -f debugfiles-base.list
 %defattr(-,root,root)
 %endif
 
 %prep
 %if %{build_cloog}
-%setup -q -n gcc-%{version} -a 1 -a 2 -a 3 -a 4 -a 5
+%setup -q -n gcc-%{version}-%{DATE} -a 1 -a 2 -a 3 -a 4 -a 5
 %else
-%setup -q -n gcc-%{version} -a 3 -a 4 -a 5
+%setup -q -n gcc-%{version}-%{DATE} -a 3 -a 4 -a 5
 %endif
 
 %patch0 -p0 -b .hack~
@@ -562,21 +572,26 @@ package or when debugging this package.
 %endif
 %patch12 -p0 -b .no-add-needed~
 %patch13 -p0 -b .pr56564~
-%patch14 -p0 -b .pr56493~
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
-%patch15 -p0 -b .color-auto~
+%patch14 -p0 -b .color-auto~
 %endif
-%patch16 -p0 -b .pr28865~
-%patch17 -p0 -b .libgo-p224~
-%patch18 -p0 -b .pr60010~
-
-%patch19 -p1 -b .for~
-%patch20 -p1 -b .buildfix~
+%patch15 -p0 -b .pr28865~
+%patch16 -p0 -b .libgo-p224~
+rm -rf libgo/go/crypto/elliptic/p224{,_test}.go
+%patch17 -p0 -b .pr60010~
+%ifarch aarch64
+%patch18 -p0 -b .aarch64-ada~
+%endif
+%patch19 -p0 -b .aarch64-async-unw-tables~
+%patch20 -p0 -b .aarch64-unwind-opt~
+%patch21 -p0 -b rh1243366~
+%patch100 -p1 -b .dec~
+%patch101 -p1 -b .for_version~
 
 %if 0%{?_enable_debug_packages}
 cat > split-debuginfo.sh <<\EOF
 #!/bin/sh
-BUILDDIR="%{_builddir}/gcc-%{version}"
+BUILDDIR="%{_builddir}/gcc-%{version}-%{DATE}"
 if [ -f "${BUILDDIR}"/debugfiles.list \
      -a -f "${BUILDDIR}"/debuglinks.list ]; then
   > "${BUILDDIR}"/debugsources-base.list
@@ -958,6 +973,7 @@ rm -f rpm.doc/changelogs/gcc/ChangeLog.[1-9]
 find rpm.doc -name \*ChangeLog\* | xargs bzip2 -9
 
 %install
+set -x
 rm -fr %{buildroot}
 
 cd obj-%{gcc_target_platform}
@@ -986,6 +1002,13 @@ if [ -f %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version} ]; then
         %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version_full}
   rmdir %{buildroot}%{_prefix}/src/debug/gcc-%{gcc_version}
 fi
+
+# move some other directories from gcc_version to gcc_version_full
+for dir in include/c++ lib{,exec}/gcc/%{gcc_target_platform}; do
+  if [ -d %{buildroot}%{_prefix}/$dir/%{gcc_version} ]; then
+    mv %{buildroot}%{_prefix}/$dir/{%{gcc_version},%{gcc_version_full}}
+  fi
+done
 
 # fix some things
 ln -sf %{program_prefix}gcc %{buildroot}%{_prefix}/bin/%{program_prefix}cc
@@ -1134,14 +1157,15 @@ else
   ln -sf POSIX_V6_LP64_OFF64 %{buildroot}%{_prefix}/libexec/getconf/default
 fi
 
-mkdir -p %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}
+#mkdir -p %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}
+mkdir -p %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 mv -f %{buildroot}%{_prefix}/%{_lib}/libstdc++*gdb.py* \
-      %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/
+      %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 pushd ../libstdc++-v3/python
 for i in `find . -name \*.py`; do
   touch -r $i %{buildroot}%{_prefix}/share/gcc-%{gcc_version}/python/$i
 done
-touch -r hook.in %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc++*gdb.py
+touch -r hook.in %{buildroot}%{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libstdc++*gdb.py
 mkdir -p %{buildroot}%{_prefix}/share/gcc-%{gcc_version_full}
 mv -f %{buildroot}%{_prefix}/share/gcc-%{gcc_version}/* \
       %{buildroot}%{_prefix}/share/gcc-%{gcc_version_full}
@@ -1480,7 +1504,7 @@ fi
 # Because glibc Prereq's libgcc and /sbin/ldconfig
 # comes from glibc, it might not exist yet when
 # libgcc is installed
-%post -n libgcc -p <lua>
+%post -n %{program_prefix}libgcc -p <lua>
 if posix.access ("/sbin/ldconfig", "x") then
   local pid = posix.fork ()
   if pid == 0 then
@@ -1490,7 +1514,7 @@ if posix.access ("/sbin/ldconfig", "x") then
   end
 end
 
-%postun -n libgcc -p <lua>
+%postun -n %{program_prefix}libgcc -p <lua>
 if posix.access ("/sbin/ldconfig", "x") then
   local pid = posix.fork ()
   if pid == 0 then
@@ -1500,74 +1524,74 @@ if posix.access ("/sbin/ldconfig", "x") then
   end
 end
 
-%post -n libstdc++ -p /sbin/ldconfig
+%post -n %{program_prefix}libstdc++ -p /sbin/ldconfig
 
-%postun -n libstdc++ -p /sbin/ldconfig
+%postun -n %{program_prefix}libstdc++ -p /sbin/ldconfig
 
-%post -n libgfortran -p /sbin/ldconfig
+%post -n %{program_prefix}libgfortran -p /sbin/ldconfig
 
-%postun -n libgfortran -p /sbin/ldconfig
+%postun -n %{program_prefix}libgfortran -p /sbin/ldconfig
 
-%post -n libgomp
+%post -n %{program_prefix}libgomp
 /sbin/ldconfig
 if [ -f %{_infodir}/%{program_prefix}libgomp.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libgomp.info.gz || :
 fi
 
-%preun -n libgomp
+%preun -n %{program_prefix}libgomp
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}libgomp.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libgomp.info.gz || :
 fi
 
-%postun -n libgomp -p /sbin/ldconfig
+%postun -n %{program_prefix}libgomp -p /sbin/ldconfig
 
-%post -n libmudflap -p /sbin/ldconfig
+%post -n %{program_prefix}libmudflap -p /sbin/ldconfig
 
-%postun -n libmudflap -p /sbin/ldconfig
+%postun -n %{program_prefix}libmudflap -p /sbin/ldconfig
 
-%post -n libquadmath
+%post -n %{program_prefix}libquadmath
 /sbin/ldconfig
 if [ -f %{_infodir}/%{program_prefix}libquadmath.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libquadmath.info.gz || :
 fi
 
-%preun -n libquadmath
+%preun -n %{program_prefix}libquadmath
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}libquadmath.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libquadmath.info.gz || :
 fi
 
-%postun -n libquadmath -p /sbin/ldconfig
+%postun -n %{program_prefix}libquadmath -p /sbin/ldconfig
 
-%post -n libitm
+%post -n %{program_prefix}libitm
 /sbin/ldconfig
 if [ -f %{_infodir}/%{program_prefix}libitm.info.gz ]; then
   /sbin/install-info \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libitm.info.gz || :
 fi
 
-%preun -n libitm
+%preun -n %{program_prefix}libitm
 if [ $1 = 0 -a -f %{_infodir}/%{program_prefix}libitm.info.gz ]; then
   /sbin/install-info --delete \
     --info-dir=%{_infodir} %{_infodir}/%{program_prefix}libitm.info.gz || :
 fi
 
-%postun -n libitm -p /sbin/ldconfig
+%postun -n %{program_prefix}libitm -p /sbin/ldconfig
 
-%post -n libatomic -p /sbin/ldconfig
+%post -n %{program_prefix}libatomic -p /sbin/ldconfig
 
-%postun -n libatomic -p /sbin/ldconfig
+%postun -n %{program_prefix}libatomic -p /sbin/ldconfig
 
-%post -n libasan -p /sbin/ldconfig
+%post -n %{program_prefix}libasan -p /sbin/ldconfig
 
-%postun -n libasan -p /sbin/ldconfig
+%postun -n %{program_prefix}libasan -p /sbin/ldconfig
 
-%post -n libtsan -p /sbin/ldconfig
+%post -n %{program_prefix}libtsan -p /sbin/ldconfig
 
-%postun -n libtsan -p /sbin/ldconfig
+%postun -n %{program_prefix}libtsan -p /sbin/ldconfig
 
 %files -f %{program_prefix}gcc.lang
 %defattr(-,root,root,-)
@@ -1818,7 +1842,7 @@ fi
 %dir %{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/libexec/gcc/%{gcc_target_platform}/%{gcc_version_full}/cc1
 
-%files -n libgcc
+%files -n %{program_prefix}libgcc
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1860,7 +1884,7 @@ fi
 %endif
 %doc rpm.doc/changelogs/gcc/cp/ChangeLog*
 
-%files -n libstdc++
+%files -n %{program_prefix}libstdc++
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1869,13 +1893,16 @@ fi
 %dir %{_datadir}/gdb
 %dir %{_datadir}/gdb/auto-load
 %dir %{_datadir}/gdb/auto-load/%{_prefix}
-%dir %{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/
-%{_datadir}/gdb/auto-load/%{_prefix}/%{_lib}/libstdc*gdb.py*
+%dir %{_datadir}/gdb/auto-load/%{_prefix}/lib/
+%dir %{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/
+%dir %{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}
+%dir %{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
+%{_datadir}/gdb/auto-load/%{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libstdc*gdb.py*
 %dir %{_prefix}/share/gcc-%{gcc_version_full}
 %dir %{_prefix}/share/gcc-%{gcc_version_full}/python
 %{_prefix}/share/gcc-%{gcc_version_full}/python/libstdcxx
 
-%files -n libstdc++-devel
+%files -n %{program_prefix}libstdc++-devel
 %defattr(-,root,root,-)
 %dir %{_prefix}/include/c++
 %dir %{_prefix}/include/c++/%{gcc_version_full}
@@ -1890,7 +1917,7 @@ fi
 %endif
 %doc rpm.doc/changelogs/libstdc++-v3/ChangeLog* libstdc++-v3/README*
 
-%files -n libstdc++-static
+%files -n %{program_prefix}libstdc++-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1911,7 +1938,7 @@ fi
 %endif
 
 %if %{build_libstdcxx_docs}
-%files -n libstdc++-docs
+%files -n %{program_prefix}libstdc++-docs
 %defattr(-,root,root)
 %{_mandir}/man3/*
 %doc rpm.doc/libstdc++-v3/html
@@ -1958,14 +1985,14 @@ fi
 %endif
 %doc rpm.doc/gfortran/*
 
-%files -n libgfortran
+%files -n %{program_prefix}libgfortran
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgfortran.so.3*
 
-%files -n libgfortran-static
+%files -n %{program_prefix}libgfortran-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1982,7 +2009,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libgfortran.a
 %endif
 
-%files -n libgomp
+%files -n %{program_prefix}libgomp
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1991,7 +2018,7 @@ fi
 %{_infodir}/%{program_prefix}libgomp.info*
 %doc rpm.doc/changelogs/libgomp/ChangeLog*
 
-%files -n libmudflap
+%files -n %{program_prefix}libmudflap
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -1999,7 +2026,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflap.so.0*
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libmudflapth.so.0*
 
-%files -n libmudflap-devel
+%files -n %{program_prefix}libmudflap-devel
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2014,7 +2041,7 @@ fi
 %endif
 %doc rpm.doc/changelogs/libmudflap/ChangeLog*
 
-%files -n libmudflap-static
+%files -n %{program_prefix}libmudflap-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2035,7 +2062,7 @@ fi
 %endif
 
 %if %{build_libquadmath}
-%files -n libquadmath
+%files -n %{program_prefix}libquadmath
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2044,7 +2071,7 @@ fi
 %{_infodir}/%{program_prefix}libquadmath.info*
 %doc rpm.doc/libquadmath/COPYING*
 
-%files -n libquadmath-devel
+%files -n %{program_prefix}libquadmath-devel
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2057,7 +2084,7 @@ fi
 %endif
 %doc rpm.doc/libquadmath/ChangeLog*
 
-%files -n libquadmath-static
+%files -n %{program_prefix}libquadmath-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2076,7 +2103,7 @@ fi
 %endif
 
 %if %{build_libitm}
-%files -n libitm
+%files -n %{program_prefix}libitm
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2084,7 +2111,7 @@ fi
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libitm.so.1*
 %{_infodir}/%{program_prefix}libitm.info*
 
-%files -n libitm-devel
+%files -n %{program_prefix}libitm-devel
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2097,7 +2124,7 @@ fi
 %endif
 %doc rpm.doc/libitm/ChangeLog*
 
-%files -n libitm-static
+%files -n %{program_prefix}libitm-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2116,14 +2143,14 @@ fi
 %endif
 
 %if %{build_libatomic}
-%files -n libatomic
+%files -n %{program_prefix}libatomic
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libatomic.so.1*
 
-%files -n libatomic-static
+%files -n %{program_prefix}libatomic-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2143,14 +2170,14 @@ fi
 %endif
 
 %if %{build_libasan}
-%files -n libasan
+%files -n %{program_prefix}libasan
 %defattr(-,root,root,-)
 %dir {_prefix}/lib/gcc
 %dir {_prefix}/lib/gcc/%{gcc_target_platform}
 %dir {_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libasan.so.0*
 
-%files -n libasan-static
+%files -n %{program_prefix}libasan-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
@@ -2170,14 +2197,14 @@ fi
 %endif
 
 %if %{build_libtsan}
-%files -n libtsan
+%files -n %{program_prefix}libtsan
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}
 %{_prefix}/lib/gcc/%{gcc_target_platform}/%{gcc_version_full}/libtsan.so.0*
 
-%files -n libtsan-static
+%files -n %{program_prefix}libtsan-static
 %defattr(-,root,root,-)
 %dir %{_prefix}/lib/gcc
 %dir %{_prefix}/lib/gcc/%{gcc_target_platform}

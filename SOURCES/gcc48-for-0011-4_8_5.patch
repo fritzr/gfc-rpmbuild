@@ -150,38 +150,27 @@ index 0000000..303dbb0
 +Fritz Reese
 +September 15, 2014
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 44c59c7..3b040c3 100644
+index 3bc3b96..a4e217f 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,31 @@
-+2014-08-10  Thomas Koenig  <tkoenig@gcc.gnu.org>
-+
-+	Backport from trunk
-+	PR fortran/61999
-+	* simplify.c (gfc_simplify_dot_product): Convert types of
-+	vectors before calculating the result.
-+
-+2014-07-19  Paul Thomas  <pault@gcc.gnu.org>
-+
-+	Backport from trunk.
-+	PR fortran/61780
-+	* dependency.c (gfc_dep_resolver): Index the 'reverse' array so
-+	that elements are skipped. This then correctly aligns 'reverse'
-+	with the scalarizer loops.
-+
-+2014-07-08  Paul Thomas  <pault@gcc.gnu.org>
-+
-+	PR fortran/61459
-+	PR fortran/58883
-+	* trans-expr.c (fcncall_realloc_result): Use the natural type
-+	for the address expression of 'res_desc'.
-+
-+2014-07-02  Jakub Jelinek  <jakub@redhat.com>
-+	    Fritz Reese  <Reese-Fritz@zai.com>
-+
-+	* decl.c (variable_decl): Reject old style initialization
-+	for derived type components.
-+
+@@ -158,20 +158,6 @@
+ 	* decl.c (variable_decl): Reject old style initialization
+ 	for derived type components.
+ 
+-2014-06-15  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
+-
+-	Backport from trunk.
+-	PR fortran/45187
+-	* trans-decl.c (gfc_create_module_variable): Don't create
+-	Cray-pointee decls twice.
+-
+-2014-05-26  Janne Blomqvist  <jb@gcc.gnu.org>
+-
+-	Backport from mainline
+-	PR libfortran/61310
+-	* intrinsics.texi (CTIME): Remove mention of locale-dependent
+-	behavior.
+-
  2014-05-22  Release Manager
  
  	* GCC 4.8.3 released.
@@ -352,7 +341,7 @@ index 55c072b..9841e41 100644
      }
  
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index 7dec803..4ede664 100644
+index 1bf6175..c67c7d0 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -53,6 +53,7 @@ static gfc_typespec current_ts;
@@ -711,7 +700,7 @@ index 7dec803..4ede664 100644
  
    var_locus = gfc_current_locus;
  
-@@ -1902,9 +2062,19 @@ variable_decl (int elem)
+@@ -1902,10 +2062,19 @@ variable_decl (int elem)
  	}
      }
  
@@ -724,15 +713,15 @@ index 7dec803..4ede664 100644
 +  }
 +
    /*  If this symbol has already shown up in a Cray Pointer declaration,
-+      and this is not a component declaration,
+       and this is not a component declaration,
        then we want to set the type & bail out.  */
--  if (gfc_option.flag_cray_pointer)
+-  if (gfc_option.flag_cray_pointer && gfc_current_state () != COMP_DERIVED)
 +  if (gfc_option.flag_cray_pointer
 +      && !gfc_comp_is_derived (gfc_current_state ()))
      {
        gfc_find_symbol (name, gfc_current_ns, 1, &sym);
        if (sym != NULL && sym->attr.cray_pointee)
-@@ -1969,7 +2139,7 @@ variable_decl (int elem)
+@@ -1970,7 +2139,7 @@ variable_decl (int elem)
       For components of derived types, it is not true, so we don't
       create a symbol for those yet.  If we fail to create the symbol,
       bail out.  */
@@ -741,21 +730,26 @@ index 7dec803..4ede664 100644
        && build_sym (name, cl, cl_deferred, &as, &var_locus) == FAILURE)
      {
        m = MATCH_ERROR;
-@@ -1996,8 +2166,33 @@ variable_decl (int elem)
+@@ -1997,15 +2166,33 @@ variable_decl (int elem)
        if (gfc_notify_std (GFC_STD_GNU, "Old-style "
  			  "initialization at %C") == FAILURE)
  	return MATCH_ERROR;
 +      /* Allow old style initializations for STRUCTURE/MAP declarations but
 +         not derived TYPE declarations (matches DEC/Intel behavior). */
-+      else if (gfc_current_state () == COMP_DERIVED)
+       else if (gfc_current_state () == COMP_DERIVED)
+-	{
+-	  gfc_error ("Invalid old style initialization for derived type "
+-		     "component at %C");
+-	  m = MATCH_ERROR;
+-	  goto cleanup;
+-	}
 +        {
 +          gfc_error ("Invalid old style initialization for derived type "
 +                     "component at %C");
 +          m = MATCH_ERROR;
 +          goto cleanup;
 +        }
- 
--      return match_old_style_init (name);
++
 +      /* For derived type components, read the initializer as a special
 +         expression and let the rest of this function apply the initializer
 +         as usual. */
@@ -768,7 +762,8 @@ index 7dec803..4ede664 100644
 +        if (m != MATCH_YES)
 +          goto cleanup;
 +      }
-+
+ 
+-      return match_old_style_init (name);
 +      /* Otherwise we treat the old style initialization just like a
 +         DATA declaration for the current variable. */
 +      else
@@ -776,7 +771,7 @@ index 7dec803..4ede664 100644
      }
  
    /* The double colon must be present in order to have initializers.
-@@ -2035,7 +2230,7 @@ variable_decl (int elem)
+@@ -2043,7 +2230,7 @@ variable_decl (int elem)
  	    }
  
  	  if (current_attr.flavor != FL_PARAMETER && gfc_pure (NULL)
@@ -785,7 +780,7 @@ index 7dec803..4ede664 100644
  	    {
  	      gfc_error ("Initialization of variable at %C is not allowed in "
  			 "a PURE procedure");
-@@ -2043,7 +2238,7 @@ variable_decl (int elem)
+@@ -2051,7 +2238,7 @@ variable_decl (int elem)
  	    }
  
  	  if (current_attr.flavor != FL_PARAMETER
@@ -794,7 +789,7 @@ index 7dec803..4ede664 100644
  	    gfc_unset_implicit_pure (gfc_current_ns->proc_name);
  
  	  if (m != MATCH_YES)
-@@ -2052,7 +2247,7 @@ variable_decl (int elem)
+@@ -2060,7 +2247,7 @@ variable_decl (int elem)
      }
  
    if (initializer != NULL && current_attr.allocatable
@@ -803,7 +798,7 @@ index 7dec803..4ede664 100644
      {
        gfc_error ("Initialization of allocatable component at %C is not "
  		 "allowed");
-@@ -2063,14 +2258,20 @@ variable_decl (int elem)
+@@ -2071,14 +2258,20 @@ variable_decl (int elem)
    /* Add the initializer.  Note that it is fine if initializer is
       NULL here, because we sometimes also need to check if a
       declaration *must* have an initialization expression.  */
@@ -826,7 +821,7 @@ index 7dec803..4ede664 100644
      }
  
    m = (t == SUCCESS) ? MATCH_YES : MATCH_ERROR;
-@@ -2557,6 +2758,35 @@ done:
+@@ -2565,6 +2758,35 @@ done:
    return MATCH_YES;
  }
  
@@ -862,7 +857,7 @@ index 7dec803..4ede664 100644
  
  /* Matches a declaration-type-spec (F03:R502).  If successful, sets the ts
     structure to the matched specification.  This is necessary for FUNCTION and
-@@ -2616,7 +2846,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2624,7 +2846,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	{
  	  if ((m = gfc_match ("*)")) != MATCH_YES)
  	    return m;
@@ -871,7 +866,7 @@ index 7dec803..4ede664 100644
  	    {
  	      gfc_error ("Assumed type at %C is not allowed for components");
  	      return MATCH_ERROR;
-@@ -2729,9 +2959,57 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2737,9 +2959,57 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
      m = gfc_match_char (')');
  
    if (m == MATCH_YES)
@@ -929,7 +924,7 @@ index 7dec803..4ede664 100644
        /* Match CLASS declarations.  */
        m = gfc_match (" class ( * )");
        if (m == MATCH_ERROR)
-@@ -2780,6 +3058,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2788,6 +3058,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	return MATCH_ERROR;
      }
  
@@ -937,7 +932,7 @@ index 7dec803..4ede664 100644
    /* Defer association of the derived type until the end of the
       specification block.  However, if the derived type can be
       found, add it to the typespec.  */
-@@ -2801,9 +3080,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2809,9 +3080,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
       stored in a symtree with the first letter of the name capitalized; the
       symtree with the all lower-case name contains the associated
       generic function.  */
@@ -948,7 +943,7 @@ index 7dec803..4ede664 100644
    sym = NULL;
    dt_sym = NULL;
    if (ts->kind != -1)
-@@ -2835,7 +3112,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2843,7 +3112,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	return MATCH_NO;
      }
  
@@ -957,7 +952,7 @@ index 7dec803..4ede664 100644
         && !(sym->attr.flavor == FL_PROCEDURE && sym->attr.generic))
        || sym->attr.subroutine)
      {
-@@ -2872,9 +3149,8 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -2883,9 +3152,8 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  
    gfc_set_sym_referenced (dt_sym);
  
@@ -969,7 +964,7 @@ index 7dec803..4ede664 100644
      return MATCH_ERROR;
  
    ts->u.derived = dt_sym;
-@@ -3235,9 +3511,7 @@ gfc_match_import (void)
+@@ -3246,9 +3514,7 @@ gfc_match_import (void)
  		 letter of the name capitalized; the symtree with the all
  		 lower-case name contains the associated generic function. */
  	      st = gfc_new_symtree (&gfc_current_ns->sym_root,
@@ -980,7 +975,7 @@ index 7dec803..4ede664 100644
  	      st->n.sym = sym;
  	      sym->refs++;
  	      sym->attr.imported = 1;
-@@ -3301,6 +3575,7 @@ match_attr_spec (void)
+@@ -3312,6 +3578,7 @@ match_attr_spec (void)
      DECL_ALLOCATABLE = GFC_DECL_BEGIN, DECL_DIMENSION, DECL_EXTERNAL,
      DECL_IN, DECL_OUT, DECL_INOUT, DECL_INTRINSIC, DECL_OPTIONAL,
      DECL_PARAMETER, DECL_POINTER, DECL_PROTECTED, DECL_PRIVATE,
@@ -988,7 +983,7 @@ index 7dec803..4ede664 100644
      DECL_PUBLIC, DECL_SAVE, DECL_TARGET, DECL_VALUE, DECL_VOLATILE,
      DECL_IS_BIND_C, DECL_CODIMENSION, DECL_ASYNCHRONOUS, DECL_CONTIGUOUS,
      DECL_NONE, GFC_DECL_END /* Sentinel */
-@@ -3321,6 +3596,7 @@ match_attr_spec (void)
+@@ -3332,6 +3599,7 @@ match_attr_spec (void)
  
    current_as = NULL;
    colon_seen = 0;
@@ -996,7 +991,7 @@ index 7dec803..4ede664 100644
  
    /* See if we get all of the keywords up to the final double colon.  */
    for (d = GFC_DECL_BEGIN; d != GFC_DECL_END; d++)
-@@ -3364,6 +3640,14 @@ match_attr_spec (void)
+@@ -3375,6 +3643,14 @@ match_attr_spec (void)
  		      d = DECL_ASYNCHRONOUS;
  		    }
  		  break;
@@ -1011,7 +1006,7 @@ index 7dec803..4ede664 100644
  		}
  	      break;
  
-@@ -3492,8 +3776,25 @@ match_attr_spec (void)
+@@ -3503,8 +3779,25 @@ match_attr_spec (void)
  	      break;
  
  	    case 's':
@@ -1039,7 +1034,7 @@ index 7dec803..4ede664 100644
  	      break;
  
  	    case 't':
-@@ -3630,6 +3931,12 @@ match_attr_spec (void)
+@@ -3641,6 +3934,12 @@ match_attr_spec (void)
  	  case DECL_SAVE:
  	    attr = "SAVE";
  	    break;
@@ -1052,13 +1047,14 @@ index 7dec803..4ede664 100644
  	  case DECL_TARGET:
  	    attr = "TARGET";
  	    break;
-@@ -3657,8 +3964,22 @@ match_attr_spec (void)
+@@ -3668,8 +3967,22 @@ match_attr_spec (void)
      {
        if (seen[d] == 0)
  	continue;
 +      else
 +        attr_seen = 1;
-+
+ 
+-      if (gfc_current_state () == COMP_DERIVED
 +      if ((d == DECL_STATIC || d == DECL_AUTOMATIC)
 +          && !gfc_option.flag_dec_static)
 +      {
@@ -1070,13 +1066,12 @@ index 7dec803..4ede664 100644
 +      /* Allow SAVE with STATIC, but don't complain. */
 +      if (d == DECL_STATIC && seen[DECL_SAVE])
 +        continue;
- 
--      if (gfc_current_state () == COMP_DERIVED
++
 +      if (gfc_comp_is_derived (gfc_current_state ())
  	  && d != DECL_DIMENSION && d != DECL_CODIMENSION
  	  && d != DECL_POINTER   && d != DECL_PRIVATE
  	  && d != DECL_PUBLIC && d != DECL_CONTIGUOUS && d != DECL_NONE)
-@@ -3666,7 +3987,8 @@ match_attr_spec (void)
+@@ -3677,7 +3990,8 @@ match_attr_spec (void)
  	  if (d == DECL_ALLOCATABLE)
  	    {
  	      if (gfc_notify_std (GFC_STD_F2003, "ALLOCATABLE "
@@ -1086,7 +1081,7 @@ index 7dec803..4ede664 100644
  		  == FAILURE)
  		{
  		  m = MATCH_ERROR;
-@@ -3675,8 +3997,8 @@ match_attr_spec (void)
+@@ -3686,8 +4000,8 @@ match_attr_spec (void)
  	    }
  	  else
  	    {
@@ -1097,7 +1092,7 @@ index 7dec803..4ede664 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
-@@ -3689,13 +4011,14 @@ match_attr_spec (void)
+@@ -3700,13 +4014,14 @@ match_attr_spec (void)
  	    attr = "PRIVATE";
  	  else
  	    attr = "PUBLIC";
@@ -1115,7 +1110,7 @@ index 7dec803..4ede664 100644
  		  == FAILURE)
  		{
  		  m = MATCH_ERROR;
-@@ -3802,10 +4125,15 @@ match_attr_spec (void)
+@@ -3813,10 +4128,15 @@ match_attr_spec (void)
  			      &seen_at[d]);
  	  break;
  
@@ -1131,7 +1126,7 @@ index 7dec803..4ede664 100644
  	case DECL_TARGET:
  	  t = gfc_add_target (&current_attr, &seen_at[d]);
  	  break;
-@@ -3855,6 +4183,7 @@ cleanup:
+@@ -3866,6 +4186,7 @@ cleanup:
    gfc_current_locus = start;
    gfc_free_array_spec (current_as);
    current_as = NULL;
@@ -1139,7 +1134,7 @@ index 7dec803..4ede664 100644
    return m;
  }
  
-@@ -3907,7 +4236,7 @@ set_com_block_bind_c (gfc_common_head *com_block, int is_bind_c)
+@@ -3918,7 +4239,7 @@ set_com_block_bind_c (gfc_common_head *com_block, int is_bind_c)
  gfc_try
  gfc_verify_c_interop (gfc_typespec *ts)
  {
@@ -1148,7 +1143,7 @@ index 7dec803..4ede664 100644
      return (ts->u.derived->ts.is_c_interop || ts->u.derived->attr.is_bind_c)
  	   ? SUCCESS : FAILURE;
    else if (ts->type == BT_CLASS)
-@@ -3997,7 +4326,8 @@ verify_bind_c_sym (gfc_symbol *tmp_sym, gfc_typespec *ts,
+@@ -4008,7 +4329,8 @@ verify_bind_c_sym (gfc_symbol *tmp_sym, gfc_typespec *ts,
  	    }
  	  else
  	    {
@@ -1158,7 +1153,7 @@ index 7dec803..4ede664 100644
                  gfc_error ("Type declaration '%s' at %L is not C "
                             "interoperable but it is BIND(C)",
                             tmp_sym->name, &(tmp_sym->declared_at));
-@@ -4259,7 +4589,7 @@ gfc_match_data_decl (void)
+@@ -4270,7 +4592,7 @@ gfc_match_data_decl (void)
      return m;
  
    if ((current_ts.type == BT_DERIVED || current_ts.type == BT_CLASS)
@@ -1167,7 +1162,7 @@ index 7dec803..4ede664 100644
      {
        sym = gfc_use_derived (current_ts.u.derived);
  
-@@ -4288,7 +4618,7 @@ gfc_match_data_decl (void)
+@@ -4299,7 +4621,7 @@ gfc_match_data_decl (void)
        && !current_ts.u.derived->attr.zero_comp)
      {
  
@@ -1176,7 +1171,7 @@ index 7dec803..4ede664 100644
  	goto ok;
  
        gfc_find_symbol (current_ts.u.derived->name,
-@@ -4296,9 +4626,10 @@ gfc_match_data_decl (void)
+@@ -4307,9 +4629,10 @@ gfc_match_data_decl (void)
  
        /* Any symbol that we find had better be a type definition
  	 which has its components defined.  */
@@ -1189,7 +1184,7 @@ index 7dec803..4ede664 100644
  	goto ok;
  
        /* Now we have an error, which we signal, and then fix up
-@@ -5200,6 +5531,7 @@ gfc_match_procedure (void)
+@@ -5211,6 +5534,7 @@ gfc_match_procedure (void)
      case COMP_INTERFACE:
        m = match_procedure_in_interface ();
        break;
@@ -1197,7 +1192,7 @@ index 7dec803..4ede664 100644
      case COMP_DERIVED:
        m = match_ppc_decl ();
        break;
-@@ -5447,6 +5779,10 @@ gfc_match_entry (void)
+@@ -5458,6 +5782,10 @@ gfc_match_entry (void)
  	    gfc_error ("ENTRY statement at %C cannot appear within "
  		       "an INTERFACE");
  	    break;
@@ -1208,7 +1203,7 @@ index 7dec803..4ede664 100644
  	  case COMP_DERIVED:
  	    gfc_error ("ENTRY statement at %C cannot appear within "
  		       "a DERIVED TYPE block");
-@@ -6032,6 +6368,24 @@ gfc_match_end (gfc_statement *st)
+@@ -6043,6 +6371,24 @@ gfc_match_end (gfc_statement *st)
        eos_ok = 0;
        break;
  
@@ -1233,7 +1228,7 @@ index 7dec803..4ede664 100644
      case COMP_DERIVED:
      case COMP_DERIVED_CONTAINS:
        *st = ST_END_TYPE;
-@@ -7022,6 +7376,110 @@ gfc_match_parameter (void)
+@@ -7033,6 +7379,110 @@ gfc_match_parameter (void)
  }
  
  
@@ -1344,7 +1339,7 @@ index 7dec803..4ede664 100644
  /* Save statements have a special syntax.  */
  
  match
-@@ -7504,6 +7962,316 @@ gfc_get_type_attr_spec (symbol_attribute *attr, char *name)
+@@ -7515,6 +7965,308 @@ gfc_get_type_attr_spec (symbol_attribute *attr, char *name)
    return MATCH_YES;
  }
  
@@ -1499,9 +1494,8 @@ index 7dec803..4ede664 100644
 +gfc_match_structure_decl (void)
 +{
 +    /* Counter used to give anonymous structures unique internal names. */
-+    int gfc_structure_id = 0;
++    static unsigned int gfc_structure_id = 0;
 +    char name[GFC_MAX_SYMBOL_LEN + 1];
-+    gfc_interface *intr;
 +    gfc_symbol *sym;
 +    match m;
 +    locus where;
@@ -1553,13 +1547,6 @@ index 7dec803..4ede664 100644
 +    sprintf (name, gfc_dt_upper_string (name));
 +    if (get_struct_decl (name, FL_STRUCT, &where, &sym) == FAILURE)
 +      return MATCH_ERROR;
-+
-+    intr = gfc_get_interface ();
-+    intr->sym = sym;
-+    intr->where = where;
-+    sym->generic = intr;
-+    sym->attr.if_source = IFSRC_DECL;
-+    sym->attr.generic = 1;
 +
 +    gfc_new_block = sym;
 +    return MATCH_YES;
@@ -1661,7 +1648,7 @@ index 7dec803..4ede664 100644
  
  /* Match the beginning of a derived type declaration.  If a type name
     was the result of a function, then it is possible to have a symbol
-@@ -7520,9 +8288,10 @@ gfc_match_derived_decl (void)
+@@ -7531,9 +8283,10 @@ gfc_match_derived_decl (void)
    match m;
    match is_type_attr_spec = MATCH_NO;
    bool seen_attr = false;
@@ -1673,7 +1660,7 @@ index 7dec803..4ede664 100644
      return MATCH_NO;
  
    name[0] = '\0';
-@@ -7554,7 +8323,11 @@ gfc_match_derived_decl (void)
+@@ -7565,7 +8318,11 @@ gfc_match_derived_decl (void)
        return MATCH_ERROR;
      }
  
@@ -1686,7 +1673,7 @@ index 7dec803..4ede664 100644
    if (m != MATCH_YES)
      return m;
  
-@@ -7608,6 +8381,7 @@ gfc_match_derived_decl (void)
+@@ -7619,6 +8376,7 @@ gfc_match_derived_decl (void)
        intr->next = head;
        gensym->generic = intr;
        gensym->attr.if_source = IFSRC_DECL;
@@ -1694,7 +1681,7 @@ index 7dec803..4ede664 100644
      }
  
    /* The symbol may already have the derived attribute without the
-@@ -7652,7 +8426,7 @@ gfc_match_derived_decl (void)
+@@ -7663,7 +8421,7 @@ gfc_match_derived_decl (void)
  
        p->ts.type = BT_DERIVED;
        p->ts.u.derived = extended;
@@ -1703,7 +1690,7 @@ index 7dec803..4ede664 100644
  
        /* Set extension level.  */
        if (extended->attr.extension == 255)
-@@ -7679,6 +8453,13 @@ gfc_match_derived_decl (void)
+@@ -7690,6 +8448,13 @@ gfc_match_derived_decl (void)
    /* Take over the ABSTRACT attribute.  */
    sym->attr.abstract = attr.abstract;
  
@@ -1717,83 +1704,6 @@ index 7dec803..4ede664 100644
    gfc_new_block = sym;
  
    return MATCH_YES;
-diff --git a/gcc/fortran/dependency.c b/gcc/fortran/dependency.c
-index e58bd22..3924905 100644
---- a/gcc/fortran/dependency.c
-+++ b/gcc/fortran/dependency.c
-@@ -1779,6 +1779,7 @@ int
- gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
- {
-   int n;
-+  int m;
-   gfc_dependency fin_dep;
-   gfc_dependency this_dep;
- 
-@@ -1828,6 +1829,8 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
- 	      break;
- 	    }
- 
-+	  /* Index for the reverse array.  */
-+	  m = -1;
- 	  for (n=0; n < lref->u.ar.dimen; n++)
- 	    {
- 	      /* Assume dependency when either of array reference is vector
-@@ -1862,38 +1865,44 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
- 		 The ability to reverse or not is set by previous conditions
- 		 in this dimension.  If reversal is not activated, the
- 		 value GFC_DEP_BACKWARD is reset to GFC_DEP_OVERLAP.  */
-+
-+	      /* Get the indexing right for the scalarizing loop. If this
-+		 is an element, there is no corresponding loop.  */
-+	      if (lref->u.ar.dimen_type[n] != DIMEN_ELEMENT)
-+		m++;
-+
- 	      if (rref->u.ar.dimen_type[n] == DIMEN_RANGE
- 		    && lref->u.ar.dimen_type[n] == DIMEN_RANGE)
- 		{
- 		  /* Set reverse if backward dependence and not inhibited.  */
--		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
--		    reverse[n] = (this_dep == GFC_DEP_BACKWARD) ?
--			         GFC_REVERSE_SET : reverse[n];
-+		  if (reverse && reverse[m] == GFC_ENABLE_REVERSE)
-+		    reverse[m] = (this_dep == GFC_DEP_BACKWARD) ?
-+			         GFC_REVERSE_SET : reverse[m];
- 
- 		  /* Set forward if forward dependence and not inhibited.  */
--		  if (reverse && reverse[n] == GFC_ENABLE_REVERSE)
--		    reverse[n] = (this_dep == GFC_DEP_FORWARD) ?
--			         GFC_FORWARD_SET : reverse[n];
-+		  if (reverse && reverse[m] == GFC_ENABLE_REVERSE)
-+		    reverse[m] = (this_dep == GFC_DEP_FORWARD) ?
-+			         GFC_FORWARD_SET : reverse[m];
- 
- 		  /* Flag up overlap if dependence not compatible with
- 		     the overall state of the expression.  */
--		  if (reverse && reverse[n] == GFC_REVERSE_SET
-+		  if (reverse && reverse[m] == GFC_REVERSE_SET
- 		        && this_dep == GFC_DEP_FORWARD)
- 		    {
--	              reverse[n] = GFC_INHIBIT_REVERSE;
-+	              reverse[m] = GFC_INHIBIT_REVERSE;
- 		      this_dep = GFC_DEP_OVERLAP;
- 		    }
--		  else if (reverse && reverse[n] == GFC_FORWARD_SET
-+		  else if (reverse && reverse[m] == GFC_FORWARD_SET
- 		        && this_dep == GFC_DEP_BACKWARD)
- 		    {
--	              reverse[n] = GFC_INHIBIT_REVERSE;
-+	              reverse[m] = GFC_INHIBIT_REVERSE;
- 		      this_dep = GFC_DEP_OVERLAP;
- 		    }
- 
- 		  /* If no intention of reversing or reversing is explicitly
- 		     inhibited, convert backward dependence to overlap.  */
- 		  if ((reverse == NULL && this_dep == GFC_DEP_BACKWARD)
--		      || (reverse != NULL && reverse[n] == GFC_INHIBIT_REVERSE))
-+		      || (reverse != NULL && reverse[m] == GFC_INHIBIT_REVERSE))
- 		    this_dep = GFC_DEP_OVERLAP;
- 		}
- 
 diff --git a/gcc/fortran/dump-parse-tree.c b/gcc/fortran/dump-parse-tree.c
 index 501a4eb..06d9e6c 100644
 --- a/gcc/fortran/dump-parse-tree.c
@@ -2327,10 +2237,10 @@ index 60d790b..0803b65 100644
  #undef DEFINE_MATH_BUILTIN
  
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index 2772932..369d245 100644
+index 7bbdac8..8c62d83 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
-@@ -1848,6 +1848,8 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
+@@ -1852,6 +1852,8 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
  	      WALK_SUBEXPR (co->ext.open->asynchronous);
  	      WALK_SUBEXPR (co->ext.open->id);
  	      WALK_SUBEXPR (co->ext.open->newunit);
@@ -2340,7 +2250,7 @@ index 2772932..369d245 100644
  
  	    case EXEC_CLOSE:
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index bd1aeb9..c144052 100644
+index 2428b51..90c50e9 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -49,7 +49,18 @@ along with GCC; see the file COPYING3.  If not see
@@ -2406,8 +2316,8 @@ index bd1aeb9..c144052 100644
  
  typedef enum
  {
-+    GFC_INIT_DERIVED_OFF = 0,
-+    GFC_INIT_DERIVED_ON
++  GFC_INIT_DERIVED_OFF = 0,
++  GFC_INIT_DERIVED_ON
 +}
 +init_derived;
 +
@@ -2517,7 +2427,7 @@ index bd1aeb9..c144052 100644
  
  gfc_st_label *gfc_get_st_label (int);
  void gfc_free_st_label (gfc_st_label *);
-@@ -2785,7 +2829,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
+@@ -2786,7 +2830,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
  gfc_try gfc_check_assign_symbol (gfc_symbol *, gfc_component *, gfc_expr *);
  
  bool gfc_has_default_initializer (gfc_symbol *);
@@ -2528,7 +2438,7 @@ index bd1aeb9..c144052 100644
  gfc_expr *gfc_get_variable_expr (gfc_symtree *);
  void gfc_add_full_array_ref (gfc_expr *, gfc_array_spec *);
  gfc_expr * gfc_lval_expr_from_sym (gfc_symbol *);
-@@ -2879,6 +2925,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
+@@ -2880,6 +2926,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
  
  /* interface.c -- FIXME: some of these should be in symbol.c */
  void gfc_free_interface (gfc_interface *);
@@ -2536,7 +2446,7 @@ index bd1aeb9..c144052 100644
  int gfc_compare_derived_types (gfc_symbol *, gfc_symbol *);
  int gfc_compare_types (gfc_typespec *, gfc_typespec *);
  int gfc_compare_interfaces (gfc_symbol*, gfc_symbol*, const char *, int, int,
-@@ -2924,6 +2971,8 @@ void gfc_module_done_2 (void);
+@@ -2925,6 +2972,8 @@ void gfc_module_done_2 (void);
  void gfc_dump_module (const char *, int);
  bool gfc_check_symbol_access (gfc_symbol *);
  void gfc_free_use_stmts (gfc_use_list *);
@@ -2546,7 +2456,7 @@ index bd1aeb9..c144052 100644
  /* primary.c */
  symbol_attribute gfc_variable_attr (gfc_expr *, gfc_typespec *);
 diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
-index 4f9008d..4c5a3f2 100644
+index 4f9008d..f98b3e6 100644
 --- a/gcc/fortran/gfortran.texi
 +++ b/gcc/fortran/gfortran.texi
 @@ -473,9 +473,9 @@ The GNU Fortran compiler is able to compile nearly all
@@ -2647,13 +2557,7 @@ index 4f9008d..4c5a3f2 100644
 -@node Extensions not implemented in GNU Fortran
 -@section Extensions not implemented in GNU Fortran
 -@cindex extensions, not implemented
-+Long long ago in a land far far away, in the time before Fortran standards
-+existed, compiler writers loved to add extensions to Fortran for anyone who
-+asked them nicely. The most popular of these extensions were implemented by
-+Digital Equipment Corporation (DEC). Since they were so popular they were
-+maintained in the Digital (and since Intel) compiler long after standards were
-+introduced. Unfortunately these extensions remain in use by a number of users.
- 
+-
 -The long history of the Fortran language, its wide use and broad
 -userbase, the large number of different compiler vendors and the lack of
 -some features crucial to users in the first standards have lead to the
@@ -2662,7 +2566,13 @@ index 4f9008d..4c5a3f2 100644
 -Fortran compiler, not all existing extensions are supported.  This section
 -aims at listing these extensions and offering advice on how best make
 -code that uses them running with the GNU Fortran compiler.
--
++Long long ago in a land far far away, in the time before Fortran standards
++existed, compiler writers loved to add extensions to Fortran for anyone who
++asked them nicely. The most popular of these extensions were implemented by
++Digital Equipment Corporation (DEC). Since they were so popular they were
++maintained in the Digital (and since Intel) compiler long after standards were
++introduced. Unfortunately these extensions remain in use by a number of users.
+ 
 -@c More can be found here:
 -@c   -- http://gcc.gnu.org/onlinedocs/gcc-3.4.6/g77/Missing-Features.html
 -@c   -- the list of Fortran and libgfortran bugs closed as WONTFIX:
@@ -2726,13 +2636,13 @@ index 4f9008d..4c5a3f2 100644
  Here is an example of code using the non portable record structure syntax:
  
  @example
-@@ -2073,15 +2110,487 @@ store_catalog(12) = pear
- print *, store_catalog(12)
+@@ -2045,43 +2082,486 @@ print *, store_catalog(12)
  @end example
  
-+@noindent
+ @noindent
+-This code can easily be rewritten in the Fortran 90 syntax as following:
 +Structures and derived types differ in a few ways:
-+
++ 
 +@itemize @bullet
 +@item Structures act like derived types with the @code{SEQUENCE} attribute.
 +Otherwise they may contain no specifiers.
@@ -2763,8 +2673,15 @@ index 4f9008d..4c5a3f2 100644
 +type names for these structures may be ommitted, in which case the structure
 +type itself is anonymous, and other structures of the same type cannot be
 +instantiated. The following shows some examples:
-+
-+@example
+ 
+ @example
+-! ``STRUCTURE /name/ ... END STRUCTURE'' becomes
+-! ``TYPE name ... END TYPE''
+-TYPE item
+-  INTEGER id
+-  CHARACTER(LEN=200) description
+-  REAL price
+-END TYPE
 +type appointment
 +  ! 'ad-hoc' structure definition; app_time is an array of two 'time'
 +  structure /time/ app_time (2) 
@@ -2787,14 +2704,27 @@ index 4f9008d..4c5a3f2 100644
 +  character(10) memo
 +end type appointment
 +@end example
-+
+ 
+-! ``RECORD /name/ variable'' becomes ``TYPE(name) variable''
+-TYPE(item) pear, store_catalog(100)
 +@item Structures may contain @code{UNION} declarations. For more detail see the
 +section on @ref{UNION and MAP}.
-+
+ 
+-! Instead of using a dot (.) to access fields of a record, the
+-! standard syntax uses a percent sign (%)
+-pear%id = 92316
+-pear%description = "juicy D'Anjou pear"
+-pear%price = 0.15
+-store_catalog(7)%id = 7831
+-store_catalog(7)%description = "milk bottle"
+-store_catalog(7)%price = 1.2
 +@item Structures support old-style initialization of components, identical to
 +those described in @ref{Old-style variable initialization}.
 +@end itemize
-+
+ 
+-! Assignments of a whole variable do not change
+-store_catalog(12) = pear
+-print *, store_catalog(12)
 +@node UNION and MAP
 +@subsubsection @code{UNION} and @code{MAP}
 +@cindex @code{UNION}
@@ -3154,7 +3084,7 @@ index 4f9008d..4c5a3f2 100644
 +  save
 +  ...
 +endsubroutine
-+@end example
+ @end example
 +@example
 +subroutine f
 +  integer a, b, c, x, y, z
@@ -3183,6 +3113,19 @@ index 4f9008d..4c5a3f2 100644
 +supports the interpretation of form feed characters in source as whitespace
 +with @option{-ffeed}.
 +
++
++@node Extensions not implemented in GNU Fortran
++@section Extensions not implemented in GNU Fortran
++@cindex extensions, not implemented
+ 
++The long history of the Fortran language, its wide use and broad
++userbase, the large number of different compiler vendors and the lack of
++some features crucial to users in the first standards have lead to the
++existence of a number of important extensions to the language.  While
++some of the most useful or popular extensions are supported by the GNU
++Fortran compiler, not all existing extensions are supported.  This section
++aims at listing these extensions and offering advice on how best make
++code that uses them running with the GNU Fortran compiler.
  
 -@c @node UNION and MAP
 -@c @subsection @code{UNION} and @code{MAP}
@@ -3192,19 +3135,6 @@ index 4f9008d..4c5a3f2 100644
 -@c For help writing this one, see
 -@c http://www.eng.umd.edu/~nsw/ench250/fortran1.htm#UNION and
 -@c http://www.tacc.utexas.edu/services/userguides/pgi/pgiws_ug/pgi32u06.htm
-+@node Extensions not implemented in GNU Fortran
-+@section Extensions not implemented in GNU Fortran
-+@cindex extensions, not implemented
-+
-+The long history of the Fortran language, its wide use and broad
-+userbase, the large number of different compiler vendors and the lack of
-+some features crucial to users in the first standards have lead to the
-+existence of a number of important extensions to the language.  While
-+some of the most useful or popular extensions are supported by the GNU
-+Fortran compiler, not all existing extensions are supported.  This section
-+aims at listing these extensions and offering advice on how best make
-+code that uses them running with the GNU Fortran compiler.
-+
 +@c More can be found here:
 +@c   -- http://gcc.gnu.org/onlinedocs/gcc-3.4.6/g77/Missing-Features.html
 +@c   -- the list of Fortran and libgfortran bugs closed as WONTFIX:
@@ -3223,22 +3153,19 @@ index 4f9008d..4c5a3f2 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 725cd8a..58cd7fb 100644
+index 2d73942..639d34e 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
-@@ -383,19 +383,125 @@ gfc_match_end_interface (void)
+@@ -383,19 +383,139 @@ gfc_match_end_interface (void)
  }
  
  
++/* Compare components according to 4.4.2 of the Fortran standard.  */
++
 +static int
-+compare_components (gfc_component *cmp1, gfc_component *cmp2)
++compare_components (gfc_component *cmp1, gfc_component *cmp2,
++    gfc_symbol *derived1, gfc_symbol *derived2)
 +{
-+  if (cmp1 == cmp2)
-+    return 1;
-+
-+  if (gfc_compare_types (&cmp1->ts, &cmp2->ts) == 0)
-+    return 0;
-+
 +  /* UNIONs, MAPs, and anonymous STRUCTURE components all have internal
 +     names of the form uU*, mM*, sS*, etc... Ignore differences here;
 +     we must do a deeper comparison. */
@@ -3261,6 +3188,21 @@ index 725cd8a..58cd7fb 100644
 +    return 0;
 +
 +  if (cmp1->attr.dimension && gfc_compare_array_spec (cmp1->as, cmp2->as) == 0)
++    return 0;
++
++  /* Make sure that link lists do not put this function into an
++     endless recursive loop!  */
++  if (!(cmp1->ts.type == BT_DERIVED && derived1 == cmp1->ts.u.derived)
++      && !(cmp2->ts.type == BT_DERIVED && derived2 == cmp2->ts.u.derived)
++      && gfc_compare_types (&cmp1->ts, &cmp2->ts) == 0)
++    return 0;
++
++  else if ( (cmp1->ts.type == BT_DERIVED && derived1 == cmp1->ts.u.derived)
++        && !(cmp2->ts.type == BT_DERIVED && derived2 == cmp2->ts.u.derived))
++    return 0;
++
++  else if (!(cmp1->ts.type == BT_DERIVED && derived1 == cmp1->ts.u.derived)
++        &&  (cmp2->ts.type == BT_DERIVED && derived2 == cmp2->ts.u.derived))
 +    return 0;
 +
 +  return 1;
@@ -3302,7 +3244,8 @@ index 725cd8a..58cd7fb 100644
 +         the same component, because one map field is created with its type
 +         declaration. Therefore don't worry about recursion here. */
 +      /* TODO: worry about recursion into parent types of the unions? */
-+      if (compare_components (cmp1, cmp2) == 0)
++      if (compare_components (cmp1, cmp2,
++            map1->ts.u.derived, map2->ts.u.derived) == 0)
 +        return 0;
 +
 +      cmp1 = cmp1->next;
@@ -3347,13 +3290,14 @@ index 725cd8a..58cd7fb 100644
 +     to lowercase). Compare anonymous type names specially because each
 +     gets a unique name when it is declared. */
 +  anonymous = (derived1->name[0] == derived2->name[0]
-+   && derived1->name[1] == (char) TOUPPER (derived1->name[0])
-+   && derived2->name[1] == (char) TOUPPER (derived2->name[0]));
++      && derived1->name[1] && derived2->name[1] && derived2->name[2]
++      && derived1->name[1] == (char) TOUPPER (derived1->name[0])
++      && derived2->name[2] == (char) TOUPPER (derived2->name[0]));
 +
    /* Special case for comparing derived types across namespaces.  If the
       true names and module names are the same and the module name is
       nonnull, then they are equal.  */
-@@ -404,12 +510,12 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -404,12 +524,12 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && strcmp (derived1->module, derived2->module) == 0)
      return 1;
  
@@ -3369,7 +3313,7 @@ index 725cd8a..58cd7fb 100644
    if (derived1->component_access == ACCESS_PRIVATE
        || derived2->component_access == ACCESS_PRIVATE)
      return 0;
-@@ -418,53 +524,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -418,53 +538,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && !(derived1->attr.is_bind_c && derived2->attr.is_bind_c))
      return 0;
  
@@ -3415,7 +3359,7 @@ index 725cd8a..58cd7fb 100644
 -	    && gfc_compare_types (&dt1->ts, &dt2->ts) == 0)
 +      if (     !(cmp1->ts.type == BT_DERIVED && derived1 == cmp1->ts.u.derived)
 +            && !(cmp2->ts.type == BT_DERIVED && derived2 == cmp2->ts.u.derived)
-+            && compare_components (cmp1, cmp2) == 0)
++            && compare_components (cmp1, cmp2, derived1, derived2) == 0)
  	return 0;
  
 -      else if ((dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
@@ -3443,7 +3387,7 @@ index 725cd8a..58cd7fb 100644
  	return 0;
      }
  
-@@ -494,10 +589,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -494,10 +603,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
        && (ts1->u.derived->attr.sequence || ts1->u.derived->attr.is_bind_c))
      return 1;
  
@@ -3460,7 +3404,7 @@ index 725cd8a..58cd7fb 100644
    if (ts1->type != BT_DERIVED && ts1->type != BT_CLASS)
      return (ts1->kind == ts2->kind);
  
-@@ -505,7 +604,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -505,7 +618,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
    if (gfc_type_compatible (ts1, ts2))
      return 1;
  
@@ -3469,7 +3413,7 @@ index 725cd8a..58cd7fb 100644
  }
  
  
-@@ -1467,7 +1566,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1467,7 +1580,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  	 functions or subroutines.  */
        if (((!p->sym->attr.function && !p->sym->attr.subroutine)
  	   || !p->sym->attr.if_source)
@@ -3478,7 +3422,7 @@ index 725cd8a..58cd7fb 100644
  	{
  	  if (p->sym->attr.external)
  	    gfc_error ("Procedure '%s' in %s at %L has no explicit interface",
-@@ -1481,17 +1580,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1481,17 +1594,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  
        /* Verify that procedures are either all SUBROUTINEs or all FUNCTIONs.  */
        if ((psave->sym->attr.function && !p->sym->attr.function
@@ -3503,7 +3447,7 @@ index 725cd8a..58cd7fb 100644
  	  return 1;
  	}
  
-@@ -1548,8 +1651,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
+@@ -1548,8 +1665,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
  	if (p->sym->name == q->sym->name && p->sym->module == q->sym->module)
  	  continue;
  
@@ -3514,7 +3458,7 @@ index 725cd8a..58cd7fb 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2463,7 +2566,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2463,7 +2580,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	  return 0;
  	}
  
@@ -3524,7 +3468,7 @@ index 725cd8a..58cd7fb 100644
  	goto match;
  
        if (f->sym == NULL)
-@@ -2514,7 +2618,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2514,7 +2632,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
        if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
@@ -3533,7 +3477,7 @@ index 725cd8a..58cd7fb 100644
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3432,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3446,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
@@ -4190,7 +4134,7 @@ index 5d50285..3a77d98 100644
  gfc_expr *gfc_simplify_ubound (gfc_expr *, gfc_expr *, gfc_expr *);
  gfc_expr *gfc_simplify_ucobound (gfc_expr *, gfc_expr *, gfc_expr *);
 diff --git a/gcc/fortran/intrinsic.texi b/gcc/fortran/intrinsic.texi
-index 1e31e4f..1e134ca 100644
+index a3b80aa..fa2080e 100644
 --- a/gcc/fortran/intrinsic.texi
 +++ b/gcc/fortran/intrinsic.texi
 @@ -23,6 +23,9 @@ Some basic guidelines for editing this document:
@@ -4749,7 +4693,7 @@ index 1e31e4f..1e134ca 100644
  @node COUNT
  @section @code{COUNT} --- Count function
  @fnindex COUNT
-@@ -6183,6 +6622,21 @@ PROGRAM test_iand
+@@ -6181,6 +6620,21 @@ PROGRAM test_iand
  END PROGRAM
  @end smallexample
  
@@ -4771,7 +4715,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IOR}, @ref{IEOR}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
  
-@@ -6324,6 +6778,21 @@ Elemental function
+@@ -6322,6 +6776,21 @@ Elemental function
  The return value is of type @code{INTEGER} and of the same kind as
  @var{I}.
  
@@ -4793,7 +4737,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IBITS}, @ref{IBSET}, @ref{IAND}, @ref{IOR}, @ref{IEOR}, @ref{MVBITS}
  
-@@ -6365,6 +6834,21 @@ Elemental function
+@@ -6363,6 +6832,21 @@ Elemental function
  The return value is of type @code{INTEGER} and of the same kind as
  @var{I}.
  
@@ -4815,7 +4759,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{BIT_SIZE}, @ref{IBCLR}, @ref{IBSET}, @ref{IAND}, @ref{IOR}, @ref{IEOR}
  @end table
-@@ -6400,6 +6884,21 @@ Elemental function
+@@ -6398,6 +6882,21 @@ Elemental function
  The return value is of type @code{INTEGER} and of the same kind as
  @var{I}.
  
@@ -4837,7 +4781,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IBCLR}, @ref{IBITS}, @ref{IAND}, @ref{IOR}, @ref{IEOR}, @ref{MVBITS}
  
-@@ -6561,6 +7060,21 @@ The return type is @code{INTEGER}, of the same kind as the
+@@ -6559,6 +7058,21 @@ The return type is @code{INTEGER}, of the same kind as the
  arguments.  (If the argument kinds differ, it is of the same kind as
  the larger argument.)
  
@@ -4859,7 +4803,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IOR}, @ref{IAND}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
  @end table
-@@ -6864,6 +7378,21 @@ The return type is @code{INTEGER}, of the same kind as the
+@@ -6862,6 +7376,21 @@ The return type is @code{INTEGER}, of the same kind as the
  arguments.  (If the argument kinds differ, it is of the same kind as
  the larger argument.)
  
@@ -4881,7 +4825,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IEOR}, @ref{IAND}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}, @ref{NOT}
  @end table
-@@ -7148,6 +7677,21 @@ Elemental function
+@@ -7146,6 +7675,21 @@ Elemental function
  The return value is of type @code{INTEGER} and of the same kind as
  @var{I}.
  
@@ -4903,7 +4847,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{ISHFTC}
  @end table
-@@ -7192,6 +7736,21 @@ the value must be greater than zero and less than or equal to
+@@ -7190,6 +7734,21 @@ the value must be greater than zero and less than or equal to
  The return value is of type @code{INTEGER} and of the same kind as
  @var{I}.
  
@@ -4925,7 +4869,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{ISHFT}
  @end table
-@@ -9070,6 +9629,14 @@ end program test_mod
+@@ -9068,6 +9627,14 @@ end program test_mod
  @item @code{MOD(A,P)}  @tab @code{INTEGER A,P} @tab @code{INTEGER} @tab Fortran 95 and later
  @item @code{AMOD(A,P)} @tab @code{REAL(4) A,P} @tab @code{REAL(4)} @tab Fortran 95 and later
  @item @code{DMOD(A,P)} @tab @code{REAL(8) A,P} @tab @code{REAL(8)} @tab Fortran 95 and later
@@ -4940,7 +4884,7 @@ index 1e31e4f..1e134ca 100644
  @end multitable
  
  @item @emph{See also}:
-@@ -9448,6 +10015,21 @@ Elemental function
+@@ -9446,6 +10013,21 @@ Elemental function
  The return type is @code{INTEGER}, of the same kind as the
  argument.
  
@@ -4962,7 +4906,7 @@ index 1e31e4f..1e134ca 100644
  @item @emph{See also}:
  @ref{IAND}, @ref{IEOR}, @ref{IOR}, @ref{IBITS}, @ref{IBSET}, @ref{IBCLR}
  
-@@ -10411,6 +10993,12 @@ end program test_real
+@@ -10409,6 +10991,12 @@ end program test_real
  @item @code{FLOAT(A)}  @tab @code{INTEGER(4)}  @tab @code{REAL(4)}  @tab Fortran 77 and later
  @item @code{DFLOAT(A)} @tab @code{INTEGER(4)}  @tab @code{REAL(8)}  @tab GNU extension
  @item @code{SNGL(A)}   @tab @code{INTEGER(8)}  @tab @code{REAL(4)}  @tab Fortran 77 and later
@@ -4975,7 +4919,7 @@ index 1e31e4f..1e134ca 100644
  @end multitable
  
  
-@@ -11414,7 +12002,64 @@ end program test_sin
+@@ -11412,7 +12000,64 @@ end program test_sin
  @end multitable
  
  @item @emph{See also}:
@@ -5041,7 +4985,7 @@ index 1e31e4f..1e134ca 100644
  @end table
  
  
-@@ -12177,7 +12822,59 @@ end program test_tan
+@@ -12175,7 +12820,59 @@ end program test_tan
  @end multitable
  
  @item @emph{See also}:
@@ -6121,7 +6065,7 @@ index cce599b..8e097e1 100644
        sprintf (buffer, "TYPE(%s)", ts->u.derived->name);
        break;
 diff --git a/gcc/fortran/module.c b/gcc/fortran/module.c
-index c267ee7..1acb997 100644
+index 4fd0d88..59d3aa5 100644
 --- a/gcc/fortran/module.c
 +++ b/gcc/fortran/module.c
 @@ -406,8 +406,8 @@ resolve_fixups (fixup_t *f, void *gp)
@@ -6233,7 +6177,20 @@ index c267ee7..1acb997 100644
        sym->module = gfc_get_string (p->u.rsym.module);
        if (p->u.rsym.binding_label)
  	sym->binding_label = IDENTIFIER_POINTER (get_identifier 
-@@ -4519,7 +4521,7 @@ read_module (void)
+@@ -4322,6 +4324,12 @@ load_needed (pointer_info *p)
+   mio_symbol (sym);
+   sym->attr.use_assoc = 1;
+ 
++  /* Unliked derived types, a STRUCTURE may share names with other symbols.
++     We greedily converted the the symbol name to lowercase before we knew its
++     type, so now we must fix it. */
++  if (sym->attr.flavor == FL_STRUCT)
++    sym->name = gfc_dt_upper_string (sym->name);
++
+   /* Mark as only or rename for later diagnosis for explicitly imported
+      but not used warnings; don't mark internal symbols such as __vtab,
+      __def_init etc. Only mark them if they have been explicitly loaded.  */
+@@ -4521,7 +4529,7 @@ read_module (void)
  	 can be used in expressions in the module.  To avoid the module loading
  	 failing, we need to associate the module's component pointer indexes
  	 with the existing symbol's component pointers.  */
@@ -6242,7 +6199,7 @@ index c267ee7..1acb997 100644
  	{
  	  gfc_component *c;
  
-@@ -4671,7 +4673,7 @@ read_module (void)
+@@ -4673,7 +4681,7 @@ read_module (void)
  		{
  		  info->u.rsym.sym = gfc_new_symbol (info->u.rsym.true_name,
  						     gfc_current_ns);
@@ -6251,7 +6208,7 @@ index c267ee7..1acb997 100644
  		  sym = info->u.rsym.sym;
  		  sym->module = gfc_get_string (info->u.rsym.module);
  
-@@ -5054,10 +5056,10 @@ write_symbol (int n, gfc_symbol *sym)
+@@ -5056,10 +5064,10 @@ write_symbol (int n, gfc_symbol *sym)
  
    mio_integer (&n);
  
@@ -6264,7 +6221,7 @@ index c267ee7..1acb997 100644
        mio_pool_string (&name);
      }
    else
-@@ -5868,7 +5870,7 @@ create_derived_type (const char *name, const char *modname,
+@@ -5870,7 +5878,7 @@ create_derived_type (const char *name, const char *modname,
    sym->attr.function = 1;
    sym->attr.generic = 1;
  
@@ -7632,7 +7589,7 @@ index a94ae21..8a3e485 100644
  
    expr = gfc_get_expr ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index 43eb240..c9ebe62 100644
+index c16e3d0..55bc443 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -520,7 +520,7 @@ static void
@@ -7872,7 +7829,7 @@ index 43eb240..c9ebe62 100644
  	  && ref->u.c.component->attr.flavor != FL_PROCEDURE)
  	{
  	  declared = ref->u.c.component->ts.u.derived;
-@@ -6192,7 +6304,7 @@ resolve_typebound_function (gfc_expr* e)
+@@ -6196,7 +6308,7 @@ resolve_typebound_function (gfc_expr* e)
  	 is present.  */
        ts = expr->ts;
        declared = ts.u.derived;
@@ -7881,7 +7838,7 @@ index 43eb240..c9ebe62 100644
        if (c->ts.u.derived == NULL)
  	c->ts.u.derived = gfc_find_derived_vtab (declared);
  
-@@ -6236,14 +6348,14 @@ resolve_typebound_function (gfc_expr* e)
+@@ -6240,14 +6352,14 @@ resolve_typebound_function (gfc_expr* e)
    declared = get_declared_from_expr (&class_ref, &new_ref, e, true);
  
    /* Weed out cases of the ultimate component being a derived type.  */
@@ -7898,7 +7855,7 @@ index 43eb240..c9ebe62 100644
    declared = c->ts.u.derived;
  
    /* Treat the call as if it is a typebound procedure, in order to roll
-@@ -6320,7 +6432,7 @@ resolve_typebound_subroutine (gfc_code *code)
+@@ -6324,7 +6436,7 @@ resolve_typebound_subroutine (gfc_code *code)
  	 that any delays in resolution are corrected and that the vtab
  	 is present.  */
        declared = expr->ts.u.derived;
@@ -7907,7 +7864,7 @@ index 43eb240..c9ebe62 100644
        if (c->ts.u.derived == NULL)
  	c->ts.u.derived = gfc_find_derived_vtab (declared);
  
-@@ -6365,7 +6477,7 @@ resolve_typebound_subroutine (gfc_code *code)
+@@ -6369,7 +6481,7 @@ resolve_typebound_subroutine (gfc_code *code)
    get_declared_from_expr (&class_ref, &new_ref, code->expr1, true);
  
    /* Weed out cases of the ultimate component being a derived type.  */
@@ -7916,7 +7873,7 @@ index 43eb240..c9ebe62 100644
  	 || (!class_ref && st->n.sym->ts.type != BT_CLASS))
      {
        gfc_free_ref_list (new_ref);
-@@ -6857,8 +6969,8 @@ derived_inaccessible (gfc_symbol *sym)
+@@ -6861,8 +6973,8 @@ derived_inaccessible (gfc_symbol *sym)
  
    for (c = sym->components; c; c = c->next)
      {
@@ -7927,7 +7884,7 @@ index 43eb240..c9ebe62 100644
      }
  
    return 0;
-@@ -7310,7 +7422,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
+@@ -7314,7 +7426,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
  	 using _copy and trans_call. It is convenient to exploit that
  	 when the allocated type is different from the declared type but
  	 no SOURCE exists by setting expr3.  */
@@ -7936,7 +7893,7 @@ index 43eb240..c9ebe62 100644
      }
    else if (!code->expr3)
      {
-@@ -7318,7 +7430,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
+@@ -7322,7 +7434,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
        gfc_typespec ts;
        gfc_expr *init_e;
  
@@ -7945,17 +7902,17 @@ index 43eb240..c9ebe62 100644
  	ts = code->ext.alloc.ts;
        else
  	ts = e->ts;
-@@ -7326,7 +7438,8 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
+@@ -7330,7 +7442,8 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
        if (ts.type == BT_CLASS)
  	ts = ts.u.derived->components->ts;
  
 -      if (ts.type == BT_DERIVED && (init_e = gfc_default_initializer (&ts)))
 +      if (gfc_bt_struct (ts.type) && (init_e = gfc_default_initializer (&ts,
-+                                                                        false)))
++                                                                      false)))
  	{
  	  gfc_code *init_st = gfc_get_code ();
  	  init_st->loc = code->loc;
-@@ -7340,7 +7453,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
+@@ -7344,7 +7457,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
    else if (code->expr3->mold && code->expr3->ts.type == BT_DERIVED)
      {
        /* Default initialization via MOLD (non-polymorphic).  */
@@ -7964,7 +7921,7 @@ index 43eb240..c9ebe62 100644
        gfc_resolve_expr (rhs);
        gfc_free_expr (code->expr3);
        code->expr3 = rhs;
-@@ -7442,7 +7555,7 @@ check_symbols:
+@@ -7446,7 +7559,7 @@ check_symbols:
  	  sym = a->expr->symtree->n.sym;
  
  	  /* TODO - check derived type components.  */
@@ -7973,7 +7930,7 @@ index 43eb240..c9ebe62 100644
  	    continue;
  
  	  if ((ar->start[i] != NULL
-@@ -9387,7 +9500,9 @@ gfc_resolve_blocks (gfc_code *b, gfc_namespace *ns)
+@@ -9391,7 +9504,9 @@ gfc_resolve_blocks (gfc_code *b, gfc_namespace *ns)
  	{
  	case EXEC_IF:
  	  if (t == SUCCESS && b->expr1 != NULL
@@ -7984,7 +7941,7 @@ index 43eb240..c9ebe62 100644
  	    gfc_error ("IF clause at %L requires a scalar LOGICAL expression",
  		       &b->expr1->where);
  	  break;
-@@ -9799,7 +9914,7 @@ nonscalar_typebound_assign (gfc_symbol *derived, int depth)
+@@ -9803,7 +9918,7 @@ nonscalar_typebound_assign (gfc_symbol *derived, int depth)
  
    for (c= derived->components; c; c = c->next)
      {
@@ -7993,7 +7950,7 @@ index 43eb240..c9ebe62 100644
  	    || c->attr.pointer
  	    || c->attr.allocatable
  	    || c->attr.proc_pointer_comp
-@@ -9873,9 +9988,172 @@ static int component_assignment_level = 0;
+@@ -9877,9 +9992,172 @@ static int component_assignment_level = 0;
  static gfc_code *tmp_head = NULL, *tmp_tail = NULL;
  
  static void
@@ -8167,7 +8124,7 @@ index 43eb240..c9ebe62 100644
    gfc_code *this_code = NULL, *head = NULL, *tail = NULL;
    gfc_expr *t1;
    int error_count, depth;
-@@ -9929,149 +10207,11 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
+@@ -9933,149 +10211,11 @@ generate_component_assignments (gfc_code **code, gfc_namespace *ns)
        add_code_to_chain (&this_code, &head, &tail);
      }
  
@@ -8320,7 +8277,7 @@ index 43eb240..c9ebe62 100644
  
    /* Put the temporary assignments at the top of the generated code.  */
    if (tmp_head && component_assignment_level == 1)
-@@ -10346,7 +10486,9 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
+@@ -10350,7 +10490,9 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
  	case EXEC_IF:
  	  if (t == SUCCESS && code->expr1 != NULL
  	      && (code->expr1->ts.type != BT_LOGICAL
@@ -8331,7 +8288,7 @@ index 43eb240..c9ebe62 100644
  	    gfc_error ("IF clause at %L requires a scalar LOGICAL expression",
  		       &code->expr1->where);
  	  break;
-@@ -10643,7 +10785,7 @@ resolve_bind_c_comms (gfc_symtree *comm_block_tree)
+@@ -10647,7 +10789,7 @@ resolve_bind_c_comms (gfc_symtree *comm_block_tree)
  static void
  resolve_bind_c_derived_types (gfc_symbol *derived_sym)
  {
@@ -8340,7 +8297,7 @@ index 43eb240..c9ebe62 100644
        && derived_sym->attr.is_bind_c == 1)
      verify_bind_c_derived_type (derived_sym);
  
-@@ -10660,7 +10802,7 @@ gfc_verify_binding_labels (gfc_symbol *sym)
+@@ -10664,7 +10806,7 @@ gfc_verify_binding_labels (gfc_symbol *sym)
    int has_error = 0;
  
    if (sym != NULL && sym->attr.is_bind_c && sym->attr.is_iso_c == 0
@@ -8349,7 +8306,7 @@ index 43eb240..c9ebe62 100644
      {
        gfc_gsymbol *bind_c_sym;
  
-@@ -10895,6 +11037,34 @@ build_init_assign (gfc_symbol *sym, gfc_expr *init)
+@@ -10899,6 +11041,34 @@ build_init_assign (gfc_symbol *sym, gfc_expr *init)
    init_st->expr2 = init;
  }
  
@@ -8384,7 +8341,7 @@ index 43eb240..c9ebe62 100644
  /* Assign the default initializer to a derived type variable or result.  */
  
  static void
-@@ -10906,7 +11076,7 @@ apply_default_init (gfc_symbol *sym)
+@@ -10910,7 +11080,7 @@ apply_default_init (gfc_symbol *sym)
      return;
  
    if (sym->ts.type == BT_DERIVED && sym->ts.u.derived)
@@ -8393,7 +8350,7 @@ index 43eb240..c9ebe62 100644
  
    if (init == NULL && sym->ts.type != BT_CLASS)
      return;
-@@ -10915,17 +11085,11 @@ apply_default_init (gfc_symbol *sym)
+@@ -10919,17 +11089,11 @@ apply_default_init (gfc_symbol *sym)
    sym->attr.referenced = 1;
  }
  
@@ -8413,7 +8370,7 @@ index 43eb240..c9ebe62 100644
    /* These symbols should never have a default initialization.  */
    if (sym->attr.allocatable
        || sym->attr.external
-@@ -10940,145 +11104,8 @@ build_default_init_expr (gfc_symbol *sym)
+@@ -10944,145 +11108,8 @@ build_default_init_expr (gfc_symbol *sym)
        || sym->assoc)
      return NULL;
  
@@ -8561,7 +8518,7 @@ index 43eb240..c9ebe62 100644
  }
  
  /* Add an initialization expression to a local variable.  */
-@@ -11102,9 +11129,11 @@ apply_default_init_local (gfc_symbol *sym)
+@@ -11106,9 +11133,11 @@ apply_default_init_local (gfc_symbol *sym)
       entry, so we just add a static initializer. Note that automatic variables
       are stack allocated even with -fno-automatic; we have also to exclude
       result variable, which are also nonstatic.  */
@@ -8576,7 +8533,7 @@ index 43eb240..c9ebe62 100644
      {
        /* Don't clobber an existing initializer!  */
        gcc_assert (sym->value == NULL);
-@@ -11228,7 +11257,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+@@ -11232,7 +11261,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
        gfc_find_symbol (sym->ts.u.derived->name, sym->ns, 0, &s);
        if (s && s->attr.generic)
  	s = gfc_find_dt_in_generic (s);
@@ -8585,7 +8542,7 @@ index 43eb240..c9ebe62 100644
  	{
  	  gfc_error ("The type '%s' cannot be host associated at %L "
  		     "because it is blocked by an incompatible object "
-@@ -11249,7 +11278,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+@@ -11253,7 +11282,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
       a hidden default for allocatable components.  */
    if (!(sym->value || no_init_flag) && sym->ns->proc_name
        && sym->ns->proc_name->attr.flavor == FL_MODULE
@@ -8594,7 +8551,7 @@ index 43eb240..c9ebe62 100644
        && !sym->attr.pointer && !sym->attr.allocatable
        && gfc_has_default_initializer (sym->ts.u.derived)
        && gfc_notify_std (GFC_STD_F2008, "Implied SAVE for "
-@@ -11262,7 +11291,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
+@@ -11266,7 +11295,7 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
    if (!(sym->value || sym->attr.pointer || sym->attr.allocatable)
        && (!no_init_flag || sym->attr.intent == INTENT_OUT))
      {
@@ -8603,7 +8560,7 @@ index 43eb240..c9ebe62 100644
      }
  
    return SUCCESS;
-@@ -12226,7 +12255,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -12230,7 +12259,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
    locus where;
    gfc_symbol* me_arg;
    gfc_symbol* super_type;
@@ -8612,7 +8569,7 @@ index 43eb240..c9ebe62 100644
  
    gcc_assert (stree);
  
-@@ -12403,7 +12432,8 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -12407,7 +12436,8 @@ resolve_typebound_procedure (gfc_symtree* stree)
        }
  
    /* Try to find a name collision with an inherited component.  */
@@ -8622,7 +8579,7 @@ index 43eb240..c9ebe62 100644
      {
        gfc_error ("Procedure '%s' at %L has the same name as an inherited"
  		 " component of '%s'",
-@@ -12551,7 +12581,7 @@ check_defined_assignments (gfc_symbol *derived)
+@@ -12555,7 +12585,7 @@ check_defined_assignments (gfc_symbol *derived)
  
    for (c = derived->components; c; c = c->next)
      {
@@ -8631,7 +8588,7 @@ index 43eb240..c9ebe62 100644
  	  || c->attr.pointer
  	  || c->attr.allocatable
  	  || c->attr.proc_pointer_comp
-@@ -12576,402 +12606,440 @@ check_defined_assignments (gfc_symbol *derived)
+@@ -12580,402 +12610,440 @@ check_defined_assignments (gfc_symbol *derived)
      }
  }
  
@@ -9387,8 +9344,8 @@ index 43eb240..c9ebe62 100644
 +		 "parent type '%s' shall also have one", sym->name,
 +		 &sym->declared_at, super_type->name);
 +      return FAILURE;
-+    }
-+
+     }
+ 
 +  /* Ensure the extended type gets resolved before we do.  */
 +  if (super_type && resolve_fl_derived0 (super_type) == FAILURE)
 +    return FAILURE;
@@ -9399,8 +9356,8 @@ index 43eb240..c9ebe62 100644
 +      gfc_error ("Non-extensible derived-type '%s' at %L must not be ABSTRACT",
 +		 sym->name, &sym->declared_at);
 +      return FAILURE;
-     }
- 
++    }
++
 +  c = (sym->attr.is_class) ? sym->components->ts.u.derived->components
 +			   : sym->components;
 +
@@ -9414,7 +9371,7 @@ index 43eb240..c9ebe62 100644
    check_defined_assignments (sym);
  
    if (!sym->attr.defined_assign_comp && super_type)
-@@ -13033,8 +13101,8 @@ resolve_fl_derived (gfc_symbol *sym)
+@@ -13037,8 +13105,8 @@ resolve_fl_derived (gfc_symbol *sym)
    if (sym->attr.is_class && sym->ts.u.derived == NULL)
      {
        /* Fix up incomplete CLASS symbols.  */
@@ -9425,7 +9382,7 @@ index 43eb240..c9ebe62 100644
  
        /* Nothing more to do for unlimited polymorphic entities.  */
        if (data->ts.u.derived->attr.unlimited_polymorphic)
-@@ -13255,6 +13323,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13259,6 +13327,11 @@ resolve_symbol (gfc_symbol *sym)
      return;
    sym->resolved = 1;
  
@@ -9437,7 +9394,7 @@ index 43eb240..c9ebe62 100644
    if (sym->attr.artificial)
      return;
  
-@@ -13320,7 +13393,11 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13327,7 +13400,11 @@ resolve_symbol (gfc_symbol *sym)
        return;
      }
  
@@ -9450,7 +9407,7 @@ index 43eb240..c9ebe62 100644
      return;
  
    /* Symbols that are module procedures with results (functions) have
-@@ -13540,7 +13617,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13547,7 +13624,7 @@ resolve_symbol (gfc_symbol *sym)
       interoperability when a variable is declared of that type.  */
    if (sym->attr.is_bind_c && sym->attr.implicit_type == 0 &&
        sym->attr.use_assoc == 0 && sym->attr.dummy == 0 &&
@@ -9459,7 +9416,7 @@ index 43eb240..c9ebe62 100644
      {
        gfc_try t = SUCCESS;
  
-@@ -13716,7 +13793,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13723,7 +13800,7 @@ resolve_symbol (gfc_symbol *sym)
    if (class_attr.codimension
        && !(class_attr.allocatable || sym->attr.dummy || sym->attr.save
  	   || sym->attr.select_type_temporary
@@ -9468,7 +9425,7 @@ index 43eb240..c9ebe62 100644
  	   || sym->ns->proc_name->attr.flavor == FL_MODULE
  	   || sym->ns->proc_name->attr.is_main_program
  	   || sym->attr.function || sym->attr.result || sym->attr.use_assoc))
-@@ -13854,7 +13931,8 @@ resolve_symbol (gfc_symbol *sym)
+@@ -13861,7 +13938,8 @@ resolve_symbol (gfc_symbol *sym)
      }
  
    /* Check threadprivate restrictions.  */
@@ -9478,7 +9435,34 @@ index 43eb240..c9ebe62 100644
        && (!sym->attr.in_common
  	  && sym->module == NULL
  	  && (sym->ns->proc_name == NULL
-@@ -14472,8 +14550,7 @@ sequence_type (gfc_typespec ts)
+@@ -13875,16 +13953,16 @@ resolve_symbol (gfc_symbol *sym)
+       && !sym->value
+       && !sym->attr.allocatable
+       && !sym->attr.alloc_comp)
+-    {
+-      symbol_attribute *a = &sym->attr;
+-
+-      if ((!a->save && !a->dummy && !a->pointer
+-	   && !a->in_common && !a->use_assoc
+-	   && (a->referenced || a->result)
+-	   && !(a->function && sym != sym->result))
+-	  || (a->dummy && a->intent == INTENT_OUT && !a->pointer))
+-	apply_default_init (sym);
+-    }
++  {
++    symbol_attribute *a = &sym->attr;
++
++    if ((!a->save && !a->dummy && !a->pointer
++          && !a->in_common && !a->use_assoc
++          && (a->referenced || a->result)
++          && !(a->function && sym != sym->result))
++        || (a->dummy && a->intent == INTENT_OUT && !a->pointer))
++      apply_default_init (sym);
++  }
+ 
+   if (sym->ts.type == BT_CLASS && sym->ns == gfc_current_ns
+       && sym->attr.dummy && sym->attr.intent == INTENT_OUT
+@@ -14479,8 +14557,7 @@ sequence_type (gfc_typespec ts)
  
    switch (ts.type)
    {
@@ -9488,7 +9472,7 @@ index 43eb240..c9ebe62 100644
        if (ts.u.derived->components == NULL)
  	return SEQ_NONDEFAULT;
  
-@@ -14559,7 +14636,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
+@@ -14566,7 +14643,7 @@ resolve_equivalence_derived (gfc_symbol *derived, gfc_symbol *sym, gfc_expr *e)
  
    for (; c ; c = c->next)
      {
@@ -9498,7 +9482,7 @@ index 43eb240..c9ebe62 100644
  	return FAILURE;
  
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 7c21f22..804a96b 100644
+index 65c65a3..804a96b 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -1699,6 +1699,235 @@ gfc_simplify_conjg (gfc_expr *e)
@@ -9737,31 +9721,7 @@ index 7c21f22..804a96b 100644
  
  gfc_expr *
  gfc_simplify_cos (gfc_expr *x)
-@@ -1877,13 +2106,22 @@ gfc_simplify_dim (gfc_expr *x, gfc_expr *y)
- gfc_expr*
- gfc_simplify_dot_product (gfc_expr *vector_a, gfc_expr *vector_b)
- {
-+
-+  gfc_expr temp;
-+
-   if (!is_constant_array_expr (vector_a)
-       || !is_constant_array_expr (vector_b))
-     return NULL;
- 
-   gcc_assert (vector_a->rank == 1);
-   gcc_assert (vector_b->rank == 1);
--  gcc_assert (gfc_compare_types (&vector_a->ts, &vector_b->ts));
-+
-+  temp.expr_type = EXPR_OP;
-+  gfc_clear_ts (&temp.ts);
-+  temp.value.op.op = INTRINSIC_NONE;
-+  temp.value.op.op1 = vector_a;
-+  temp.value.op.op2 = vector_b;
-+  gfc_type_convert_binary (&temp, 1);
- 
-   return compute_dot_product (vector_a, 1, 0, vector_b, 1, 0, true);
- }
-@@ -5936,6 +6174,45 @@ gfc_simplify_sum (gfc_expr *array, gfc_expr *dim, gfc_expr *mask)
+@@ -5945,6 +6174,45 @@ gfc_simplify_sum (gfc_expr *array, gfc_expr *dim, gfc_expr *mask)
  
  
  gfc_expr *
@@ -9808,7 +9768,7 @@ index 7c21f22..804a96b 100644
  {
    gfc_expr *result;
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 1b3702f..6fabea3 100644
+index 785f582..4134c64 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -40,6 +40,7 @@ const mstring flavors[] =
@@ -10257,7 +10217,7 @@ index a217c47..60ce458 100644
  			 " has undefined result at %L", &expr->where);
  	  return fold_convert (gfc_get_logical_type (expr->ts.kind), tmp);
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 7d23561..1d34c2e 100644
+index b473d66..d4a34e6 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -593,7 +593,7 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
@@ -10300,7 +10260,7 @@ index 7d23561..1d34c2e 100644
  	  gfc_copy_dt_decls_ifequal (s, sym, true);
  	  return true;
  	}
-@@ -4045,7 +4050,7 @@ gfc_create_module_variable (gfc_symbol * sym)
+@@ -4046,7 +4051,7 @@ gfc_create_module_variable (gfc_symbol * sym)
        && sym->ts.type == BT_DERIVED)
      sym->backend_decl = gfc_typenode_for_spec (&(sym->ts));
  
@@ -10309,7 +10269,7 @@ index 7d23561..1d34c2e 100644
        && sym->backend_decl
        && TREE_CODE (sym->backend_decl) == RECORD_TYPE)
      {
-@@ -4264,7 +4269,7 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
+@@ -4265,7 +4270,7 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
      }
    else switch (ts->type)
      {
@@ -10319,7 +10279,7 @@ index 7d23561..1d34c2e 100644
  	return false;
        cm = expr->ts.u.derived->components;
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index d6411b0..3776096 100644
+index 456b2ce..ccb611d 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1550,6 +1550,7 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
@@ -10330,9 +10290,9 @@ index d6411b0..3776096 100644
  
    c = ref->u.c.component;
  
-@@ -1558,15 +1559,20 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
+@@ -1560,15 +1561,20 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
    field = c->backend_decl;
-   gcc_assert (TREE_CODE (field) == FIELD_DECL);
+   gcc_assert (field && TREE_CODE (field) == FIELD_DECL);
    decl = se->expr;
 +  context = DECL_FIELD_CONTEXT (field);
  
@@ -10353,7 +10313,7 @@ index d6411b0..3776096 100644
      {
        tree f2 = c->norestrict_decl;
        if (!f2 || DECL_FIELD_CONTEXT (f2) != TREE_TYPE (decl))
-@@ -5684,8 +5690,8 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
+@@ -5686,8 +5692,8 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
      {
        switch (ts->type)
  	{
@@ -10363,7 +10323,7 @@ index d6411b0..3776096 100644
  	  gfc_init_se (&se, NULL);
  	  if (ts->type == BT_CLASS && expr->expr_type == EXPR_NULL)
  	    gfc_conv_structure (&se, gfc_class_null_initializer(ts, expr), 1);
-@@ -5829,7 +5835,7 @@ gfc_trans_alloc_subarray_assign (tree dest, gfc_component * cm,
+@@ -5831,7 +5837,7 @@ gfc_trans_alloc_subarray_assign (tree dest, gfc_component * cm,
    gfc_add_modify (&block, dest, se.expr);
  
    /* Deal with arrays of derived types with allocatable components.  */
@@ -10372,7 +10332,7 @@ index d6411b0..3776096 100644
  	&& cm->ts.u.derived->attr.alloc_comp)
      tmp = gfc_copy_alloc_comp (cm->ts.u.derived,
  			       se.expr, dest,
-@@ -6016,7 +6022,7 @@ gfc_trans_subcomponent_assign (tree dest, gfc_component * cm, gfc_expr * expr)
+@@ -6018,7 +6024,7 @@ gfc_trans_subcomponent_assign (tree dest, gfc_component * cm, gfc_expr * expr)
  	  gfc_add_expr_to_block (&block, tmp);
  	}
      }
@@ -10381,7 +10341,7 @@ index d6411b0..3776096 100644
      {
        if (expr->expr_type != EXPR_STRUCTURE)
  	{
-@@ -6123,6 +6129,23 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
+@@ -6125,6 +6131,23 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
        return;
      }
  
@@ -10405,7 +10365,7 @@ index d6411b0..3776096 100644
    cm = expr->ts.u.derived->components;
  
    for (c = gfc_constructor_first (expr->value.constructor);
-@@ -6163,6 +6186,7 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
+@@ -6165,6 +6188,7 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
  	  CONSTRUCTOR_APPEND_ELT (v, cm->backend_decl, val);
  	}
      }
@@ -10413,7 +10373,7 @@ index d6411b0..3776096 100644
    se->expr = build_constructor (type, v);
    if (init)
      TREE_CONSTANT (se->expr) = 1;
-@@ -6835,7 +6859,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -6838,7 +6862,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
        gfc_trans_string_copy (&block, llen, lse->expr, ts.kind, rlen,
  			     rse->expr, ts.kind);
      }
@@ -10422,7 +10382,7 @@ index d6411b0..3776096 100644
      {
        cond = NULL_TREE;
  
-@@ -6878,7 +6902,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -6881,7 +6905,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
  	  gfc_add_expr_to_block (&block, tmp);
  	}
      }
@@ -10431,16 +10391,7 @@ index d6411b0..3776096 100644
      {
        gfc_add_block_to_block (&block, &lse->pre);
        gfc_add_block_to_block (&block, &rse->pre);
-@@ -7096,7 +7120,7 @@ fcncall_realloc_result (gfc_se *se, int rank)
- 
-   res_desc = gfc_evaluate_now (desc, &se->pre);
-   gfc_conv_descriptor_data_set (&se->pre, res_desc, null_pointer_node);
--  se->expr = gfc_build_addr_expr (TREE_TYPE (se->expr), res_desc);
-+  se->expr = gfc_build_addr_expr (NULL_TREE, res_desc);
- 
-   /* Free the lhs after the function call and copy the result data to
-      the lhs descriptor.  */
-@@ -7889,7 +7913,7 @@ copyable_array_p (gfc_expr * expr)
+@@ -7892,7 +7916,7 @@ copyable_array_p (gfc_expr * expr)
      case BT_CHARACTER:
        return false;
  
@@ -10785,34 +10736,6 @@ index 0000000..0d39d48
 +if ( g(2) .ne. 2 ) then
 +  call abort ()
 +endif
-+
-+end
-diff --git a/gcc/testsuite/gfortran.dg/cray_pointers_11.f90 b/gcc/testsuite/gfortran.dg/cray_pointers_11.f90
-new file mode 100644
-index 0000000..038e4dc
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/cray_pointers_11.f90
-@@ -0,0 +1,22 @@
-+! { dg-do compile }
-+! { dg-options "-fcray-pointer" }
-+!
-+! PR fortran/62174
-+! Component declarations within derived types would overwrite the typespec of 
-+! variables with the same name who were Cray pointees.
-+implicit none
-+
-+type t1
-+  integer i
-+end type t1
-+type(t1) x
-+
-+pointer (x_ptr, x)
-+
-+type t2
-+  real x ! should not overwrite x's type
-+end type t2
-+
-+x%i = 0 ! should see no error here
 +
 +end
 diff --git a/gcc/testsuite/gfortran.dg/dec/README b/gcc/testsuite/gfortran.dg/dec/README
@@ -15749,20 +15672,6 @@ index 0000000..36ba36d
 +      call assertss ("t%c",  t%c,  ' ')
 +
 +      end
-diff --git a/gcc/testsuite/gfortran.dg/oldstyle_5.f b/gcc/testsuite/gfortran.dg/oldstyle_5.f
-new file mode 100644
-index 0000000..8a0d311
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/oldstyle_5.f
-@@ -0,0 +1,8 @@
-+C { dg-do compile }
-+      TYPE T
-+      INTEGER A(2)/1,2/ ! { dg-error "Invalid old style initialization for derived type component" }
-+      END TYPE
-+      TYPE S
-+      INTEGER B/1/ ! { dg-error "Invalid old style initialization for derived type component" }
-+      END TYPE
-+      END
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index fa9c113..871d721 100644
 --- a/libgfortran/io/close.c
@@ -15809,7 +15718,7 @@ index 8b4fda3..93c564a 100644
  	  opp.common = fpp->common;
  	  opp.common.flags &= IOPARM_COMMON_MASK;
 diff --git a/libgfortran/io/io.h b/libgfortran/io/io.h
-index 10f0985..7dfa577 100644
+index e78f315..62cb4e6 100644
 --- a/libgfortran/io/io.h
 +++ b/libgfortran/io/io.h
 @@ -209,6 +209,18 @@ typedef enum
@@ -15865,7 +15774,7 @@ index 10f0985..7dfa577 100644
  unit_flags;
  
 diff --git a/libgfortran/io/list_read.c b/libgfortran/io/list_read.c
-index 91ef8b5..a1dd840 100644
+index 2b80838..7f84706 100644
 --- a/libgfortran/io/list_read.c
 +++ b/libgfortran/io/list_read.c
 @@ -1618,7 +1618,10 @@ read_real (st_parameter_dt *dtp, void * dest, int length)
@@ -15985,7 +15894,7 @@ index f45e1b4..9e82d23 100644
  	  /* Unexpected end of line. Set the position.  */
  	  dtp->u.p.sf_seen_eor = 1;
 diff --git a/libgfortran/io/transfer.c b/libgfortran/io/transfer.c
-index 5260be7..cd197ad 100644
+index 87c67bf..25fcbf6 100644
 --- a/libgfortran/io/transfer.c
 +++ b/libgfortran/io/transfer.c
 @@ -306,7 +306,8 @@ read_sf (st_parameter_dt *dtp, int * length)
@@ -16008,7 +15917,7 @@ index 5260be7..cd197ad 100644
  
        u_flags.status = STATUS_UNKNOWN;
  
-@@ -3035,6 +3039,9 @@ next_record_r (st_parameter_dt *dtp, int done)
+@@ -3036,6 +3040,9 @@ next_record_r (st_parameter_dt *dtp, int done)
    int bytes_left;
    char p;
    int cc;
@@ -16018,7 +15927,7 @@ index 5260be7..cd197ad 100644
  
    switch (current_mode (dtp))
      {
-@@ -3099,7 +3106,7 @@ next_record_r (st_parameter_dt *dtp, int done)
+@@ -3100,7 +3107,7 @@ next_record_r (st_parameter_dt *dtp, int done)
  	    } 
  	  break;
  	}
@@ -16027,7 +15936,7 @@ index 5260be7..cd197ad 100644
  	{
  	  do
  	    {
-@@ -3288,8 +3295,11 @@ static void
+@@ -3289,8 +3296,11 @@ static void
  next_record_w (st_parameter_dt *dtp, int done)
  {
    gfc_offset m, record, max_pos;
@@ -16039,7 +15948,7 @@ index 5260be7..cd197ad 100644
    /* Zero counters for X- and T-editing.  */
    max_pos = dtp->u.p.max_pos;
    dtp->u.p.max_pos = dtp->u.p.skips = dtp->u.p.pending_spaces = 0;
-@@ -3431,11 +3441,15 @@ next_record_w (st_parameter_dt *dtp, int done)
+@@ -3432,11 +3442,15 @@ next_record_w (st_parameter_dt *dtp, int done)
        else
  	{
  #ifdef HAVE_CRLF
@@ -16057,7 +15966,7 @@ index 5260be7..cd197ad 100644
            char * p = fbuf_alloc (dtp->u.p.current_unit, len);
            if (!p)
              goto io_error;
-@@ -3443,6 +3457,7 @@ next_record_w (st_parameter_dt *dtp, int done)
+@@ -3444,6 +3458,7 @@ next_record_w (st_parameter_dt *dtp, int done)
            *(p++) = '\r';
  #endif
            *p = '\n';
@@ -16066,10 +15975,10 @@ index 5260be7..cd197ad 100644
  	    {
  	      dtp->u.p.current_unit->strm_pos += len;
 diff --git a/libgfortran/io/unix.c b/libgfortran/io/unix.c
-index 8b9d7a7..63d97cd 100644
+index 185d0dc..95c30c6 100644
 --- a/libgfortran/io/unix.c
 +++ b/libgfortran/io/unix.c
-@@ -1331,6 +1331,41 @@ regular_file (st_parameter_open *opp, unit_flags *flags)
+@@ -1341,6 +1341,41 @@ regular_file (st_parameter_open *opp, unit_flags *flags)
    return fd;			/* failure */
  }
  
@@ -16111,7 +16020,7 @@ index 8b9d7a7..63d97cd 100644
  
  /* open_external()-- Open an external file, unix specific version.
   * Change flags->action if it is ACTION_UNSPECIFIED on entry.
-@@ -1364,6 +1399,10 @@ open_external (st_parameter_open *opp, unit_flags *flags)
+@@ -1374,6 +1409,10 @@ open_external (st_parameter_open *opp, unit_flags *flags)
      return NULL;
    fd = fix_fd (fd);
  
@@ -16122,7 +16031,7 @@ index 8b9d7a7..63d97cd 100644
    return fd_to_stream (fd);
  }
  
-@@ -1632,6 +1671,38 @@ flush_all_units (void)
+@@ -1642,6 +1681,38 @@ flush_all_units (void)
  }
  
  
@@ -16176,10 +16085,10 @@ index bf59a8e..a90869a 100644
  internal_proto(delete_file);
  
 diff --git a/libgfortran/io/write.c b/libgfortran/io/write.c
-index f17528e..e46a443 100644
+index 4ef5586..9e60580 100644
 --- a/libgfortran/io/write.c
 +++ b/libgfortran/io/write.c
-@@ -1547,7 +1547,7 @@ list_formatted_write_scalar (st_parameter_dt *dtp, bt type, void *p, int kind,
+@@ -1548,7 +1548,7 @@ list_formatted_write_scalar (st_parameter_dt *dtp, bt type, void *p, int kind,
    if (dtp->u.p.first_item)
      {
        dtp->u.p.first_item = 0;
@@ -16189,7 +16098,7 @@ index f17528e..e46a443 100644
    else
      {
 diff --git a/libgfortran/libgfortran.h b/libgfortran/libgfortran.h
-index f54edc0..a5dfe70 100644
+index 9a713d8..fa3f8ef 100644
 --- a/libgfortran/libgfortran.h
 +++ b/libgfortran/libgfortran.h
 @@ -634,6 +634,9 @@ st_parameter_common;
