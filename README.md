@@ -38,10 +38,8 @@ Checkout this repository into `rpmbuild` and grab the required source files:
 mkdir $RPMBUILD
 hg clone http://user@repo.rincon.com:5000/M50/gfc-rpm $RPMBUILD
 cd $RPMBUILD/SOURCES
-wget ftp://gcc.gnu.org/pub/gcc/infrastructure/gmp-4.3.2.tar.bz2
-wget ftp://gcc.gnu.org/pub/gcc/infrastructure/mpfr-2.4.2.tar.bz2
-wget ftp://gcc.gnu.org/pub/gcc/infrastructure/mpc-0.8.1.tar.gz
-wget ftp://gcc.gnu.org/pub/gcc/releases/gcc-4.8.3/gcc-4.8.3.tar.bz2
+wget http://vault.centos.org/7.2.1511/os/Source/SPackages/gcc-4.8.5-4.el7.src.rpm
+rpm2cpio gcc-4.8.5-4.el7.src.rpm | cpio -di
 ```
 
 (Note: The gcc sources are large (~80MB); if you find the download too slow,
