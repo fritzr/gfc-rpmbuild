@@ -1,9 +1,9 @@
 diff --git a/README.md b/README.md
 new file mode 100644
-index 0000000..303dbb0
+index 0000000..cf8c736
 --- /dev/null
 +++ b/README.md
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,146 @@
 +Open source fortran compiler for Midas
 +======================================
 +This repository contains source code for `gfc-gfortran`, a modified version
@@ -14,8 +14,8 @@ index 0000000..303dbb0
 +About this repository
 +=====================
 +The contents of this repository only contain _changes_ to the gcc source code
-+starting from the gcc-4.8.3 release. Version 4.8.3 is modern and will
-+be the default compiler shipped with RHEL 7 and Fedora 20. To build this
++starting from the gcc-4.8.5 release. Version 4.8.5 is modern and will
++be the default compiler shipped with RHEL/CentOs 7 and Fedora 20. To build this
 +version of the compiler you need to independently acquire the gcc source code
 +(described below).
 +
@@ -29,7 +29,7 @@ index 0000000..303dbb0
 +Binary RPMs are available in the
 +[gfc-rpms](http://repo.rincon.com:5000/M50/gfc-rpms) repository which allow
 +easy installation of `gfc-gfortran` and related components on x86_64 RedHat
-+6.0+ systems. For other systems, you must build the compiler from scratch (see
++6/7 systems. For other systems, you must build the compiler from scratch (see
 +below).
 +
 +Building the compiler from scratch
@@ -52,10 +52,10 @@ index 0000000..303dbb0
 +to contain the compiler sources, temporary build files, and the resulting
 +executables and libraries, respectively.
 +
-+First fetch the original sources from the gcc-4.8.3 release:
++First fetch the original sources from the gcc-4.8.5 release:
 +```bash
-+wget -O /tmp/gcc-4.8.3.tar.bz2 ftp://gcc.gnu.org/pub/gcc/releases/gcc-4.8.3/gcc-4.8.3.tar.bz2
-+bzip2 -cd /tmp/gcc-4.8.3.tar.bz2 | tar --strip-components=1 -C $GCCSRC -xf -
++wget -O /tmp/gcc-4.8.5.tar.bz2 ftp://gcc.gnu.org/pub/gcc/releases/gcc-4.8.5/gcc-4.8.5.tar.bz2
++bzip2 -cd /tmp/gcc-4.8.5.tar.bz2 | tar --strip-components=1 -C $GCCSRC -xf -
 +```
 +(Note: The gcc sources are large (~80MB); if you find the download too slow,
 +you should try one of the [GNU mirror sites](http://www.gnu.org/prep/ftp.html).
@@ -68,8 +68,8 @@ index 0000000..303dbb0
 +
 +```bash
 +cd /tmp
-+wget -O gfc-gcc-4.8.3.zip $username@repo.rincon.com:5000/M50/gfc-gfortran/archive/tip.zip
-+unzip gfc-gcc-4.8.3.zip # extracts in ./gfc-gfortran-<hash>/
++wget -O gfc-gcc-4.8.5.zip $username@repo.rincon.com:5000/M50/gfc-gfortran/archive/tip.zip
++unzip gfc-gcc-4.8.5.zip # extracts in ./gfc-gfortran-<hash>/
 +rsync -raz gfc-gfortran-*/* $GCCSRC
 +```
 +
@@ -114,8 +114,9 @@ index 0000000..303dbb0
 +
 +Using the compiler
 +==================
-+Midas 5.0 supports the version of gfortran, gcc and g++ built from the sources
-+in this repository. Midas 5.0 is configured to allow the following compilers:
++Midas supports the version of gfortran, gcc and g++ built from the sources
++in this repository since version 4.14.0, including Midas 5.0+. Midas is
++configured to allow the following compilers:
 +```
 +XM_FORTRAN=gfc-gfortran
 +XM_CC=gfc-gcc
@@ -123,12 +124,12 @@ index 0000000..303dbb0
 +```
 +
 +By default (for compatibility) this version of the compiler does not interpret
-+Fortran code much differently than stock gfortran 4.8.3. Nearly all DEC
++Fortran code much differently than stock gfortran 4.8.5. Nearly all DEC
 +extension support is enabled with the compile-time flag `-fdec`. Midas 5.0
 +has been tested with the following flags, which should be in
 +`$XMDISK/xm/cfg/build_flags.cfg`:
 +
-+`fortran: -fPIC -fdec -finit-local-zero -finit-derived -fdollar-ok -fcray-pointer -ffixed-line-length-132`
++`fortran: -fPIC -fdec -finit-local-zero -finit-derived -fdollar-ok -fcray-pointer -ffixed-line-length-132 -Wno-argument-mismatch`
 +
 +If you run into any problems using this version of gfortran with Midas 5.0+
 +that you do not encounter with another compiler, please contact Fritz Reese
@@ -2250,7 +2251,7 @@ index 7bbdac8..8c62d83 100644
  
  	    case EXEC_CLOSE:
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index 2428b51..90c50e9 100644
+index 2428b51..3fd6bcf 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -49,7 +49,18 @@ along with GCC; see the file COPYING3.  If not see
@@ -2365,15 +2366,17 @@ index 2428b51..90c50e9 100644
    gfc_st_label *err;
  }
  gfc_open;
-@@ -2256,6 +2282,7 @@ typedef struct
+@@ -2256,6 +2282,9 @@ typedef struct
    int warn_realloc_lhs_all;
    int warn_compare_reals;
    int warn_target_lifetime;
 +  int warn_argument_mismatch;
++  int warn_format_tab;
++  int warn_missing_include_dirs;
    int max_errors;
  
    int flag_all_intrinsics;
-@@ -2290,6 +2317,7 @@ typedef struct
+@@ -2290,6 +2319,7 @@ typedef struct
    int flag_module_private;
    int flag_recursive;
    int flag_init_local_zero;
@@ -2381,7 +2384,7 @@ index 2428b51..90c50e9 100644
    int flag_init_integer;
    int flag_init_integer_value;
    int flag_init_real;
-@@ -2302,6 +2330,19 @@ typedef struct
+@@ -2302,6 +2332,19 @@ typedef struct
    int flag_realloc_lhs;
    int flag_aggressive_function_elimination;
    int flag_frontend_optimize;
@@ -2401,7 +2404,7 @@ index 2428b51..90c50e9 100644
  
    int fpe;
    int rtcheck;
-@@ -2523,6 +2564,7 @@ gfc_try gfc_check_any_c_kind (gfc_typespec *);
+@@ -2523,6 +2566,7 @@ gfc_try gfc_check_any_c_kind (gfc_typespec *);
  int gfc_validate_kind (bt, int, bool);
  int gfc_get_int_kind_from_width_isofortranenv (int size);
  int gfc_get_real_kind_from_width_isofortranenv (int size);
@@ -2409,7 +2412,7 @@ index 2428b51..90c50e9 100644
  tree gfc_get_derived_type (gfc_symbol * derived);
  extern int gfc_index_integer_kind;
  extern int gfc_default_integer_kind;
-@@ -2568,6 +2610,7 @@ gfc_try gfc_add_cray_pointee (symbol_attribute *, locus *);
+@@ -2568,6 +2612,7 @@ gfc_try gfc_add_cray_pointee (symbol_attribute *, locus *);
  match gfc_mod_pointee_as (gfc_array_spec *);
  gfc_try gfc_add_protected (symbol_attribute *, const char *, locus *);
  gfc_try gfc_add_result (symbol_attribute *, const char *, locus *);
@@ -2417,7 +2420,7 @@ index 2428b51..90c50e9 100644
  gfc_try gfc_add_save (symbol_attribute *, save_state, const char *, locus *);
  gfc_try gfc_add_threadprivate (symbol_attribute *, const char *, locus *);
  gfc_try gfc_add_saved_common (symbol_attribute *, locus *);
-@@ -2610,7 +2653,8 @@ gfc_try gfc_copy_attr (symbol_attribute *, symbol_attribute *, locus *);
+@@ -2610,7 +2655,8 @@ gfc_try gfc_copy_attr (symbol_attribute *, symbol_attribute *, locus *);
  gfc_try gfc_add_component (gfc_symbol *, const char *, gfc_component **);
  gfc_symbol *gfc_use_derived (gfc_symbol *);
  gfc_symtree *gfc_use_derived_tree (gfc_symtree *);
@@ -2427,7 +2430,7 @@ index 2428b51..90c50e9 100644
  
  gfc_st_label *gfc_get_st_label (int);
  void gfc_free_st_label (gfc_st_label *);
-@@ -2786,7 +2830,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
+@@ -2786,7 +2832,9 @@ gfc_try gfc_check_pointer_assign (gfc_expr *, gfc_expr *);
  gfc_try gfc_check_assign_symbol (gfc_symbol *, gfc_component *, gfc_expr *);
  
  bool gfc_has_default_initializer (gfc_symbol *);
@@ -2438,7 +2441,7 @@ index 2428b51..90c50e9 100644
  gfc_expr *gfc_get_variable_expr (gfc_symtree *);
  void gfc_add_full_array_ref (gfc_expr *, gfc_array_spec *);
  gfc_expr * gfc_lval_expr_from_sym (gfc_symbol *);
-@@ -2880,6 +2926,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
+@@ -2880,6 +2928,7 @@ gfc_try gfc_ref_dimen_size (gfc_array_ref *, int dimen, mpz_t *, mpz_t *);
  
  /* interface.c -- FIXME: some of these should be in symbol.c */
  void gfc_free_interface (gfc_interface *);
@@ -2446,7 +2449,7 @@ index 2428b51..90c50e9 100644
  int gfc_compare_derived_types (gfc_symbol *, gfc_symbol *);
  int gfc_compare_types (gfc_typespec *, gfc_typespec *);
  int gfc_compare_interfaces (gfc_symbol*, gfc_symbol*, const char *, int, int,
-@@ -2925,6 +2972,8 @@ void gfc_module_done_2 (void);
+@@ -2925,6 +2974,8 @@ void gfc_module_done_2 (void);
  void gfc_dump_module (const char *, int);
  bool gfc_check_symbol_access (gfc_symbol *);
  void gfc_free_use_stmts (gfc_use_list *);
@@ -5047,7 +5050,7 @@ index a3b80aa..fa2080e 100644
  
  
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index b0b43d8..56d9d77 100644
+index b0b43d8..3d29466 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -115,13 +115,17 @@ by type.  Explanations are in the following sections.
@@ -5080,7 +5083,7 @@ index b0b43d8..56d9d77 100644
  -Wline-truncation -Wno-align-commons -Wno-tabs -Wreal-q-constant @gol
  -Wsurprising -Wunderflow -Wunused-parameter -Wrealloc-lhs Wrealloc-lhs-all @gol
 --Wtarget-lifetime -fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
-+-Wtarget-lifetime -Wargument-mismatch @gol
++-Wtarget-lifetime -Wargument-mismatch -Wformat-tab @gol
 +-flazy-logicals -fmax-errors=@var{n} -fsyntax-only -pedantic -pedantic-errors
  }
  
@@ -5093,7 +5096,7 @@ index b0b43d8..56d9d77 100644
  -fmax-array-constructor=@var{n} -fmax-stack-var-size=@var{n}
  -fno-align-commons @gol
  -fno-automatic -fno-protect-parens -fno-underscoring -fno-whole-file @gol
-@@ -227,6 +233,78 @@ given they are treated as if the first column contained a blank.  If the
+@@ -227,6 +233,79 @@ given they are treated as if the first column contained a blank.  If the
  @option{-fd-lines-as-comments} option is given, they are treated as
  comment lines.
  
@@ -5109,7 +5112,8 @@ index b0b43d8..56d9d77 100644
 +@option{-fdec-math} @option{-fdec-logical-xor} @option{-fdec-bitwise-ops}
 +@option{-fd-lines-as-comments} @option{-fdec-io} @option{-ffeed}
 +@option{-fdec-intrinsic-ints} @option{-fdec-static} @option{-flazy-logicals}
-+@option{-ftype-print}
++@option{-ftype-print} @option{-Wno-format-tab}
++@option{-Wno-missing-include-dirs}
 +
 +@item -fdec-intrinsic-ints
 +@opindex @code{fdec-intrinsic-ints}
@@ -5172,7 +5176,7 @@ index b0b43d8..56d9d77 100644
  @item -fdefault-double-8
  @opindex @code{fdefault-double-8}
  Set the @code{DOUBLE PRECISION} type to an 8 byte wide type.  If
-@@ -309,6 +387,11 @@ lines in the source file. The default value is 132.
+@@ -309,6 +388,11 @@ lines in the source file. The default value is 132.
  @option{-ffree-line-length-0} means the same thing as
  @option{-ffree-line-length-none}.
  
@@ -5184,7 +5188,7 @@ index b0b43d8..56d9d77 100644
  @item -fmax-identifier-length=@var{n}
  @opindex @code{fmax-identifier-length=}@var{n}
  Specify the maximum allowed identifier length. Typical values are
-@@ -677,6 +760,14 @@ These options control the amount and kinds of errors and warnings produced
+@@ -677,6 +761,14 @@ These options control the amount and kinds of errors and warnings produced
  by GNU Fortran:
  
  @table @gcctabopt
@@ -5199,7 +5203,7 @@ index b0b43d8..56d9d77 100644
  @item -fmax-errors=@var{n}
  @opindex @code{fmax-errors=}@var{n}
  @cindex errors, limiting
-@@ -954,6 +1045,11 @@ This option is implied by @option{-Wextra}.
+@@ -954,6 +1046,17 @@ This option is implied by @option{-Wextra}.
  Warn if the pointer in a pointer assignment might be longer than the its
  target. This option is implied by @option{-Wall}.
  
@@ -5208,10 +5212,16 @@ index b0b43d8..56d9d77 100644
 +Warn when the type or rank of formal and actual arguments do not match.
 +Enabled by default.
 +
++@item -Wformat-tab
++@opindex @code{Wformat-tab}
++Warn when a tab appears in a format specifier. Enabled by default. Note that
++this is still a GNU extension, and tabs in a format specifier will be an error
++if the standard is specified other than @option{-std=gnu}.
++
  @item -Werror
  @opindex @code{Werror}
  @cindex warnings, to errors
-@@ -1518,11 +1614,13 @@ on the stack. This flag cannot be used together with
+@@ -1518,11 +1621,13 @@ on the stack. This flag cannot be used together with
  @option{-fmax-stack-var-size=} or @option{-fno-automatic}.
  
  @item -finit-local-zero
@@ -5225,7 +5235,7 @@ index b0b43d8..56d9d77 100644
  @opindex @code{finit-integer}
  @opindex @code{finit-real}
  @opindex @code{finit-logical}
-@@ -1537,7 +1635,7 @@ initialization options are provided by the
+@@ -1537,7 +1642,7 @@ initialization options are provided by the
  the real and imaginary parts of local @code{COMPLEX} variables),
  @option{-finit-logical=@var{<true|false>}}, and
  @option{-finit-character=@var{n}} (where @var{n} is an ASCII character
@@ -5234,7 +5244,7 @@ index b0b43d8..56d9d77 100644
  @itemize @bullet
  @item
  allocatable arrays
-@@ -1546,7 +1644,8 @@ components of derived type variables
+@@ -1546,7 +1651,8 @@ components of derived type variables
  @item
  variables that appear in an @code{EQUIVALENCE} statement.
  @end itemize
@@ -5245,7 +5255,7 @@ index b0b43d8..56d9d77 100644
  Note that the @option{-finit-real=nan} option initializes @code{REAL}
  and @code{COMPLEX} variables with a quiet NaN. For a signalling NaN
 diff --git a/gcc/fortran/io.c b/gcc/fortran/io.c
-index 1d46474..83dee53 100644
+index 1d46474..3f87385 100644
 --- a/gcc/fortran/io.c
 +++ b/gcc/fortran/io.c
 @@ -38,6 +38,12 @@ typedef struct
@@ -5261,7 +5271,19 @@ index 1d46474..83dee53 100644
  	tag_file	= {"FILE", " file =", " %e", BT_CHARACTER },
  	tag_status	= {"STATUS", " status =", " %e", BT_CHARACTER},
  	tag_e_access	= {"ACCESS", " access =", " %e", BT_CHARACTER},
-@@ -1374,6 +1380,92 @@ match_ltag (const io_tag *tag, gfc_st_label ** label)
+@@ -201,7 +207,10 @@ next_char_not_space (bool *error)
+       if (c == '\t')
+ 	{
+ 	  if (gfc_option.allow_std & GFC_STD_GNU)
+-	    gfc_warning ("Extension: Tab character in format at %C");
++            {
++              if (gfc_option.warn_format_tab)
++                gfc_warning ("Extension: Tab character in format at %C");
++            }
+ 	  else
+ 	    {
+ 	      gfc_error ("Extension: Tab character in format at %C");
+@@ -1374,6 +1383,92 @@ match_ltag (const io_tag *tag, gfc_st_label ** label)
  }
  
  
@@ -5354,7 +5376,7 @@ index 1d46474..83dee53 100644
  /* Resolution of the FORMAT tag, to be called from resolve_tag.  */
  
  static gfc_try
-@@ -1620,6 +1712,23 @@ match_open_element (gfc_open *open)
+@@ -1620,6 +1715,23 @@ match_open_element (gfc_open *open)
    if (m != MATCH_NO)
      return m;
  
@@ -5378,7 +5400,7 @@ index 1d46474..83dee53 100644
    return MATCH_NO;
  }
  
-@@ -1652,6 +1761,8 @@ gfc_free_open (gfc_open *open)
+@@ -1652,6 +1764,8 @@ gfc_free_open (gfc_open *open)
    gfc_free_expr (open->convert);
    gfc_free_expr (open->asynchronous);
    gfc_free_expr (open->newunit);
@@ -5387,7 +5409,7 @@ index 1d46474..83dee53 100644
    free (open);
  }
  
-@@ -1682,6 +1793,8 @@ gfc_resolve_open (gfc_open *open)
+@@ -1682,6 +1796,8 @@ gfc_resolve_open (gfc_open *open)
    RESOLVE_TAG (&tag_e_sign, open->sign);
    RESOLVE_TAG (&tag_convert, open->convert);
    RESOLVE_TAG (&tag_newunit, open->newunit);
@@ -5396,7 +5418,7 @@ index 1d46474..83dee53 100644
  
    if (gfc_reference_st_label (open->err, ST_LABEL_TARGET) == FAILURE)
      return FAILURE;
-@@ -1928,6 +2041,17 @@ gfc_match_open (void)
+@@ -1928,6 +2044,17 @@ gfc_match_open (void)
  	}
      }
  
@@ -5414,7 +5436,7 @@ index 1d46474..83dee53 100644
    /* Checks on the DECIMAL specifier.  */
    if (open->decimal)
      {
-@@ -2069,6 +2193,17 @@ gfc_match_open (void)
+@@ -2069,6 +2196,17 @@ gfc_match_open (void)
        warn_or_error ("RECL in OPEN statement at %C must be positive");
      }
  
@@ -5432,7 +5454,7 @@ index 1d46474..83dee53 100644
    /* Checks on the STATUS specifier.  */
    if (open->status && open->status->expr_type == EXPR_CONSTANT)
      {
-@@ -2258,6 +2393,8 @@ gfc_match_close (void)
+@@ -2258,6 +2396,8 @@ gfc_match_close (void)
    /* Checks on the STATUS specifier.  */
    if (close->status && close->status->expr_type == EXPR_CONSTANT)
      {
@@ -5456,7 +5478,7 @@ index 2499c90..42f5649 100644
  IOPARM (close,   status,	1 << 7,  char1)
  IOPARM (filepos, common,	0,	 common)
 diff --git a/gcc/fortran/lang.opt b/gcc/fortran/lang.opt
-index fbe8a1b..4195f7e 100644
+index fbe8a1b..f7f66ed 100644
 --- a/gcc/fortran/lang.opt
 +++ b/gcc/fortran/lang.opt
 @@ -205,6 +205,10 @@ Wampersand
@@ -5470,7 +5492,29 @@ index fbe8a1b..4195f7e 100644
  Warray-temporaries
  Fortran Warning
  Warn about creation of array temporaries
-@@ -373,6 +377,46 @@ fd-lines-as-comments
+@@ -233,6 +237,10 @@ Wextra
+ Fortran Warning
+ Print extra (possibly unwanted) warnings
+ 
++Wformat-tab
++Fortran Warning
++Warn about tabs in format specifiers
++
+ Wfunction-elimination
+ Fortran Warning
+ Warn about function call elimination
+@@ -253,6 +261,10 @@ Wintrinsics-std
+ Fortran Warning
+ Warn on intrinsics not part of the selected standard
+ 
++Wmissing-include-dirs
++Fortran
++; Documented in C/C++
++
+ Wreal-q-constant
+ Fortran Warning
+ Warn about real-literal-constants with 'q' exponent-letter
+@@ -373,6 +385,46 @@ fd-lines-as-comments
  Fortran RejectNegative
  Treat lines with 'D' in column one as comments
  
@@ -5517,7 +5561,7 @@ index fbe8a1b..4195f7e 100644
  fdefault-double-8
  Fortran
  Set the default double precision kind to an 8 byte wide type
-@@ -413,6 +457,10 @@ ff2c
+@@ -413,6 +465,10 @@ ff2c
  Fortran
  Use f2c calling convention
  
@@ -5528,7 +5572,7 @@ index fbe8a1b..4195f7e 100644
  ffixed-form
  Fortran RejectNegative
  Assume that the source file is fixed form
-@@ -481,6 +529,18 @@ finit-real=
+@@ -481,6 +537,18 @@ finit-real=
  Fortran RejectNegative Joined
  -finit-real=<zero|nan|inf|-inf>	Initialize local real variables
  
@@ -5547,7 +5591,7 @@ index fbe8a1b..4195f7e 100644
  fmax-array-constructor=
  Fortran RejectNegative Joined UInteger
  -fmax-array-constructor=<n>	Maximum number of objects in an array constructor
-@@ -501,6 +561,10 @@ fstack-arrays
+@@ -501,6 +569,10 @@ fstack-arrays
  Fortran
  Put all local arrays on stack.
  
@@ -6246,13 +6290,25 @@ index 05de49b..3724e6e 100644
  		   &expr->where);
      }
 diff --git a/gcc/fortran/options.c b/gcc/fortran/options.c
-index fba1a3f..a329abb 100644
+index fba1a3f..abb8cfb 100644
 --- a/gcc/fortran/options.c
 +++ b/gcc/fortran/options.c
-@@ -51,6 +51,27 @@ set_default_std_flags (void)
+@@ -51,6 +51,41 @@ set_default_std_flags (void)
    gfc_option.warn_std = GFC_STD_F95_DEL | GFC_STD_LEGACY;
  }
  
++static void
++set_missing_include_dirs (int value)
++{
++  gfc_option.warn_missing_include_dirs = value;
++
++  /* We might have buffered an include dir warning, so clear it.
++     (We know the buffered warning is an include dir warning because all
++     other warnings issued during cmdline parsing use gfc_warning_now.) */
++  if (!value)
++    gfc_clear_warning ();
++}
++
 +/* Set all the DEC extension flags. */
 +
 +static void
@@ -6261,6 +6317,8 @@ index fba1a3f..a329abb 100644
 +    if (value) gfc_option.flag_dollar_ok = 1;
 +    if (value) gfc_option.flag_d_lines = 0; /* -fd-lines-as-comments */
 +    if (value) gfc_option.flag_loc_rval = 1;
++    if (value) gfc_option.warn_format_tab = 0;
++    if (value) set_missing_include_dirs (0);
 +    gfc_option.flag_dec_extended_int = value;
 +    gfc_option.flag_dec_structure  = value;
 +    gfc_option.flag_dec_member_dot = value;
@@ -6277,15 +6335,17 @@ index fba1a3f..a329abb 100644
  
  /* Return language mask for Fortran options.  */
  
-@@ -113,6 +134,7 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -113,6 +148,9 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.warn_realloc_lhs_all = 0;
    gfc_option.warn_compare_reals = 0;
    gfc_option.warn_target_lifetime = 0;
 +  gfc_option.warn_argument_mismatch = 1;
++  gfc_option.warn_format_tab = 1;
++  gfc_option.warn_missing_include_dirs = 1;
    gfc_option.max_errors = 25;
  
    gfc_option.flag_all_intrinsics = 0;
-@@ -155,6 +177,7 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -155,6 +193,7 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.flag_init_logical = GFC_INIT_LOGICAL_OFF;
    gfc_option.flag_init_character = GFC_INIT_CHARACTER_OFF;
    gfc_option.flag_init_character_value = (char)0;
@@ -6293,7 +6353,7 @@ index fba1a3f..a329abb 100644
    gfc_option.flag_align_commons = 1;
    gfc_option.flag_protect_parens = -1;
    gfc_option.flag_realloc_lhs = -1;
-@@ -165,6 +188,9 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -165,10 +204,15 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.rtcheck = 0;
    gfc_option.coarray = GFC_FCOARRAY_NONE;
  
@@ -6303,7 +6363,23 @@ index fba1a3f..a329abb 100644
    set_default_std_flags ();
  
    /* Initialize cpp-related options.  */
-@@ -726,6 +752,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+   gfc_cpp_init_options (decoded_options_count, decoded_options);
++
++  gfc_buffer_error (1);
+ }
+ 
+ 
+@@ -257,6 +301,9 @@ gfc_post_options (const char **pfilename)
+   char *source_path;
+   int i;
+ 
++  gfc_warning_check ();
++  gfc_buffer_error (0);
++
+   /* Excess precision other than "fast" requires front-end
+      support.  */
+   if (flag_excess_precision_cmdline == EXCESS_PRECISION_STANDARD
+@@ -726,6 +773,18 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.warn_unused_dummy_argument = value;
        break;
  
@@ -6311,10 +6387,18 @@ index fba1a3f..a329abb 100644
 +      gfc_option.warn_argument_mismatch = value;
 +      break;
 +
++    case OPT_Wformat_tab:
++      gfc_option.warn_format_tab = value;
++      break;
++
++    case OPT_Wmissing_include_dirs:
++      set_missing_include_dirs (value);
++      break;
++
      case OPT_fall_intrinsics:
        gfc_option.flag_all_intrinsics = 1;
        break;
-@@ -942,6 +972,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -942,6 +1001,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.flag_init_character_value = (char)0;
        break;
  
@@ -6325,7 +6409,7 @@ index fba1a3f..a329abb 100644
      case OPT_finit_logical_:
        if (!strcasecmp (arg, "false"))
  	gfc_option.flag_init_logical = GFC_INIT_LOGICAL_FALSE;
-@@ -1119,6 +1153,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -1119,6 +1182,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
      case OPT_fcoarray_:
        gfc_handle_coarray_option (arg);
        break;
@@ -9500,6 +9584,28 @@ index c16e3d0..abf65c5 100644
  	  && (resolve_equivalence_derived (c->ts.u.derived, sym, e) == FAILURE))
  	return FAILURE;
  
+diff --git a/gcc/fortran/scanner.c b/gcc/fortran/scanner.c
+index f714ed0..d762e6c 100644
+--- a/gcc/fortran/scanner.c
++++ b/gcc/fortran/scanner.c
+@@ -332,14 +332,9 @@ add_path_to_list (gfc_directorylist **list, const char *path,
+   if (stat (q, &st))
+     {
+       if (errno != ENOENT)
+-	gfc_warning_now ("Include directory \"%s\": %s", path,
+-			 xstrerror(errno));
+-      else
+-	{
+-	  /* FIXME:  Also support -Wmissing-include-dirs.  */
+-	  if (warn)
+-	    gfc_warning_now ("Nonexistent include directory \"%s\"", path);
+-	}
++        gfc_warning ("Include directory %s: %s", path, xstrerror(errno));
++      else if (warn && gfc_option.warn_missing_include_dirs)
++        gfc_warning ("Nonexistent include directory %s", path);
+       return;
+     }
+   else if (!S_ISDIR (st.st_mode))
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
 index 65c65a3..804a96b 100644
 --- a/gcc/fortran/simplify.c
@@ -10236,7 +10342,7 @@ index a217c47..60ce458 100644
  			 " has undefined result at %L", &expr->where);
  	  return fold_convert (gfc_get_logical_type (expr->ts.kind), tmp);
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index b473d66..d4a34e6 100644
+index b473d66..6c6fd5b 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -593,7 +593,7 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
@@ -10248,7 +10354,52 @@ index b473d66..d4a34e6 100644
        && INTEGER_CST_P (DECL_SIZE_UNIT (decl))
        && !gfc_can_put_var_on_stack (DECL_SIZE_UNIT (decl))
  	 /* Put variable length auto array pointers always into stack.  */
-@@ -693,14 +693,14 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
+@@ -603,7 +603,43 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
+ 	  || sym->attr.pointer
+ 	  || sym->attr.allocatable)
+       && !DECL_ARTIFICIAL (decl))
+-    TREE_STATIC (decl) = 1;
++    {
++      TREE_STATIC (decl) = 1;
++
++      /* Because the size of this variable isn't known until now, we may have
++         greedily added an initializer to this variable (in build_init_assign)
++         even though the max-stack-var-size indicates the variable should be
++         static. Therefore we rip out the automatic initializer here and
++         replace it with a static one.  */
++      gfc_symtree *st = gfc_find_symtree (sym->ns->sym_root, sym->name);
++      gfc_code *prev = NULL;
++      gfc_code *code = sym->ns->code;
++      while (code && code->op == EXEC_INIT_ASSIGN)
++        {
++          /* Look for an initializer meant for this symbol.  */
++          if (code->expr1->symtree == st)
++            {
++              if (prev)
++                prev->next = code->next;
++              else
++                sym->ns->code = code->next;
++
++              break;
++            }
++
++          prev = code;
++          code = code->next;
++        }
++      if (code && code->op == EXEC_INIT_ASSIGN)
++        {
++          /* Keep the init expression for a static initializer.  */
++          sym->value = code->expr2;
++          /* Cleanup the defunct code object, without freeing the init expr.  */
++          code->expr2 = NULL;
++          gfc_free_statement (code);
++          free (code);
++        }
++    }
+ 
+   /* Handle threadprivate variables.  */
+   if (sym->attr.threadprivate
+@@ -693,14 +729,14 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
  	  st->n.sym = sym;
  	  sym->refs++;
  	}
@@ -10265,7 +10416,7 @@ index b473d66..d4a34e6 100644
  		  {
  		    s = intr->sym;
  		    break;
-@@ -708,7 +708,12 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
+@@ -708,7 +744,12 @@ gfc_get_module_backend_decl (gfc_symbol *sym)
      	    }
  
  	  if (!s->backend_decl)
@@ -10279,7 +10430,16 @@ index b473d66..d4a34e6 100644
  	  gfc_copy_dt_decls_ifequal (s, sym, true);
  	  return true;
  	}
-@@ -4046,7 +4051,7 @@ gfc_create_module_variable (gfc_symbol * sym)
+@@ -1487,7 +1528,7 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+   if (TREE_STATIC (decl)
+       && !(sym->attr.use_assoc && !intrinsic_array_parameter)
+       && (sym->attr.save || sym->ns->proc_name->attr.is_main_program
+-	  || gfc_option.flag_max_stack_var_size == 0
++	  || !gfc_can_put_var_on_stack (DECL_SIZE_UNIT (decl))
+ 	  || sym->attr.data || sym->ns->proc_name->attr.flavor == FL_MODULE)
+       && (gfc_option.coarray != GFC_FCOARRAY_LIB
+ 	  || !sym->attr.codimension || sym->attr.allocatable))
+@@ -4046,7 +4087,7 @@ gfc_create_module_variable (gfc_symbol * sym)
        && sym->ts.type == BT_DERIVED)
      sym->backend_decl = gfc_typenode_for_spec (&(sym->ts));
  
@@ -10288,7 +10448,7 @@ index b473d66..d4a34e6 100644
        && sym->backend_decl
        && TREE_CODE (sym->backend_decl) == RECORD_TYPE)
      {
-@@ -4265,7 +4270,7 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
+@@ -4265,7 +4306,7 @@ check_constant_initializer (gfc_expr *expr, gfc_typespec *ts, bool array,
      }
    else switch (ts->type)
      {
@@ -14295,81 +14455,62 @@ index 0000000..2da7d15
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
 new file mode 100644
-index 0000000..2e5ce0a
+index 0000000..5e2b9af
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
-@@ -0,0 +1,71 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-structure" }
-+      !
-+      ! Test nested/ad-hoc structure definitions.
-+      !
-+      include 'assert.inc'
+@@ -0,0 +1,52 @@
++! { dg-do run }
++! { dg-options "-ffree-form -fdec-structure" }
++!
++! Test nested STRUCTURE definitions.
++!
 +
-+      program main
++subroutine aborts (s)
++  character(*), intent(in) :: s
++  print *, s
++  call abort()
++end subroutine
 +
-+      structure /date/
-+        integer*1 day, month 
-+        integer*2 year 
-+      end structure 
++structure /s3/
++  real p
++  structure /s4/ recrd, recrd_a(3)
++    integer i, j
++  end structure
++  real q
++end structure
 +
-+      structure /appointment/
-+      record/date/app_date 
-+      structure /time/ app_time (2) 
-+        integer*1       hour, minute 
-+      end structure 
-+      structure/memo/app_memo (4)
-+        record/time/when
-+        character*20       why
-+        structure /person/ who
-+            character*10   name
-+        end structure
-+      end structure
-+      logical         app_flag 
-+      end structure
++record /s3/ r3
++record /s4/ r4
 +
-+      record /appointment/ tomorrow
-+      record /time/ now
++r3.p = 1.3579
++r4.i = 0
++r4.j = 1
++r3.recrd = r4
++r3.recrd_a(1) = r3.recrd
++r3.recrd_a(2).i = 1
++r3.recrd_a(2).j = 0
 +
-+      tomorrow.app_date = date(6, 17, 2014)
-+      tomorrow.app_time(1) = time(15, 0)
-+      tomorrow.app_time(2) = time(16, 0)
-+      tomorrow.app_memo(1).when = now
-+      tomorrow.app_memo(1).why = "Kill"
-+      tomorrow.app_memo(2).when = now
-+      tomorrow.app_memo(2).why = "fortran"
-+      tomorrow.app_memo(3).when = now
-+      tomorrow.app_memo(3).why = "with"
-+      tomorrow.app_memo(4).when = now
-+      tomorrow.app_memo(4).why = "fire"
-+      tomorrow.app_flag = .true.
++if (r3.p .ne. 1.3579) then
++  call aborts("r3.p")
++endif
 +
-+      call assertbb("tomorrow.app_date.day",   tomorrow.app_date.day,
-+     & 6_1)
-+      call assertbb("tomorrow.app_date.month", tomorrow.app_date.month, 
-+     & 17_1)
-+      call assertii("tomorrow.app_date.year",  tomorrow.app_date.year,  
-+     & 2014_2)
-+      call assertbb("tomorrow.app_time(1).hour", 
-+     & tomorrow.app_time(1).hour, 15_1)
-+      call assertbb("tomorrow.app_time(1).minute", 
-+     & tomorrow.app_time(1).minute, 0_1)
-+      call assertbb("tomorrow.app_time(2).hour", 
-+     & tomorrow.app_time(2).hour, 16_1)
-+      call assertbb("tomorrow.app_time(2).minute", 
-+     & tomorrow.app_time(2).minute, 0_1)
-+      call assert  ("tomorrow.app_flag",       tomorrow.app_flag)
++if (r4.i .ne. 0) then
++  call aborts("r4.i")
++endif
 +
-+      call assertss("tomorrow.app_memo(1).why",
-+     & tomorrow.app_memo(1).why, "Kill")
-+      call assertss("tomorrow.app_memo(2).why", 
-+     & tomorrow.app_memo(2).why, "fortran")
-+      call assertss("tomorrow.app_memo(3).why", 
-+     & tomorrow.app_memo(3).why, "with")
-+      call assertss("tomorrow.app_memo(4).why", 
-+     & tomorrow.app_memo(4).why, "fire")
++if (r4.j .ne. 1) then
++  call aborts("r4.j")
++endif
 +
-+      end program
++if (r3.recrd.i .ne. 0 .or. r3.recrd.j .ne. 1) then
++  call aborts("r3.recrd")
++endif
++
++if (r3.recrd_a(2).i .ne. 1 .or. r3.recrd_a(2).j .ne. 0) then
++  call aborts("r3.recrd_a(2)")
++endif
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_anon.f b/gcc/testsuite/gfortran.dg/dec/struct_anon.f
 new file mode 100644
 index 0000000..9a80ebc
@@ -15569,6 +15710,48 @@ index 795ac8e..e3dfdfc 100644
  gfortran-dg-runtest [lsort \
         [glob -nocomplain $srcdir/$subdir/*.\[fF\]{,90,95,03,08} ] ] $DEFAULT_FFLAGS
  
+diff --git a/gcc/testsuite/gfortran.dg/inig_flag_16.f90 b/gcc/testsuite/gfortran.dg/inig_flag_16.f90
+new file mode 100644
+index 0000000..3b234de
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/inig_flag_16.f90
+@@ -0,0 +1,36 @@
++! { dg-do run }
++! { dg-options "-finit-integer=12345 -fautomatic -fmax-stack-var-size=8" }
++!
++! Make sure that variables larger than max-stack-var-size become
++! static and are given the correct _static_ initializer.
++!
++
++function set(idx, val)
++  implicit none
++  integer, intent(in) :: idx, val
++  integer set
++  integer arr(100)
++
++  set = arr(idx)
++  arr(idx) = val
++  return
++end function
++
++  integer set, val
++
++  val = set(1, 5)
++  if (val .ne. 12345) then
++    call abort()
++  endif
++
++  val = set(1, 10)
++  if (val .ne. 5) then
++    call abort()
++  endif
++
++  val = set(1, 100)
++  if (val .ne. 10) then
++    call abort()
++  endif
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/init_derived_1.f b/gcc/testsuite/gfortran.dg/init_derived_1.f
 new file mode 100644
 index 0000000..c187203
@@ -15691,6 +15874,32 @@ index 0000000..36ba36d
 +      call assertss ("t%c",  t%c,  ' ')
 +
 +      end
+diff --git a/gcc/testsuite/gfortran.dg/init_flag_15.f90 b/gcc/testsuite/gfortran.dg/init_flag_15.f90
+new file mode 100644
+index 0000000..a0bfc64
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/init_flag_15.f90
+@@ -0,0 +1,20 @@
++! { dg-do compile }
++! { dg-options "-fdump-tree-original -finit-local-zero -fautomatic -fmax-stack-var-size=8" }
++!
++! Make sure that variables larger than max-stack-var-size which become
++! static are not given automatic initializers on function entry.
++!
++
++function set(idx, val)
++  implicit none
++  integer, intent(in) :: idx, val
++  integer set
++  integer arr(100)
++
++  set = arr(idx)
++  arr(idx) = val
++  return
++end function
++
++! There should be no automatic initializer for arr
++! { dg-final { scan-tree-dump-times "arr = " 0 "original" } }
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index fa9c113..871d721 100644
 --- a/libgfortran/io/close.c
