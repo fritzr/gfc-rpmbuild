@@ -3490,7 +3490,7 @@ index 2d73942..639d34e 100644
        if (sub_flag && intr->sym->attr.function)
  	continue;
 diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
-index 7d78419..7922b24 100644
+index 7d78419..8cf89c7 100644
 --- a/gcc/fortran/intrinsic.c
 +++ b/gcc/fortran/intrinsic.c
 @@ -1108,6 +1108,25 @@ add_functions (void)
@@ -3861,7 +3861,7 @@ index 7d78419..7922b24 100644
    add_sym_1 ("dfloat", GFC_ISYM_REAL, CLASS_ELEMENTAL, ACTUAL_NO, BT_REAL, dd, GFC_STD_GNU,
  	     gfc_check_float, gfc_simplify_dble, gfc_resolve_dble,
  	     a, BT_REAL, dr, REQUIRED);
-@@ -2857,6 +3108,109 @@ add_functions (void)
+@@ -2857,6 +3108,119 @@ add_functions (void)
  	     x, BT_UNKNOWN, 0, REQUIRED);
  		
    make_generic ("loc", GFC_ISYM_LOC, GFC_STD_GNU);
@@ -3870,108 +3870,118 @@ index 7d78419..7922b24 100644
 +
 +  if (gfc_option.flag_dec_math)
 +  {
-+  add_sym_1 ("acosd", GFC_ISYM_ACOS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_acos,
-+	     x, BT_REAL, dr, REQUIRED);
++    add_sym_1 ("acosd", GFC_ISYM_ACOS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dr, REQUIRED);
 +
-+  add_sym_1 ("dacosd", GFC_ISYM_ACOS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_acos,
-+	     x, BT_REAL, dd, REQUIRED);
++    add_sym_1 ("dacosd", GFC_ISYM_ACOS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  make_generic ("acosd", GFC_ISYM_ACOS, GFC_STD_GNU);
++    make_generic ("acosd", GFC_ISYM_ACOS, GFC_STD_GNU);
 +
++    add_sym_1 ("asind", GFC_ISYM_ASIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dr, REQUIRED);
 +
-+  add_sym_1 ("asind", GFC_ISYM_ASIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_asin,
-+             x, BT_REAL, dr, REQUIRED);
++    add_sym_1 ("dasind", GFC_ISYM_ASIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  add_sym_1 ("dasind", GFC_ISYM_ASIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_asin,
-+             x, BT_REAL, dd, REQUIRED);
++    make_generic ("asind", GFC_ISYM_ASIN, GFC_STD_GNU);
 +
-+  make_generic ("asind", GFC_ISYM_ASIN, GFC_STD_GNU);
++    add_sym_1 ("atand", GFC_ISYM_ATAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dr, REQUIRED);
 +
++    add_sym_1 ("datand", GFC_ISYM_ATAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_atrigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  add_sym_1 ("atand", GFC_ISYM_ATAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_atrigd, gfc_resolve_atan,
-+             x, BT_REAL, dr, REQUIRED);
++    make_generic ("atand", GFC_ISYM_ATAN, GFC_STD_GNU);
 +
-+  add_sym_1 ("datand", GFC_ISYM_ATAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_atrigd, gfc_resolve_atan,
-+             x, BT_REAL, dd, REQUIRED);
++    add_sym_2 ("atan2d",GFC_ISYM_ATAN2,CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_atan2, gfc_simplify_atan2d, gfc_resolve_atan2d,
++        y, BT_REAL, dr, REQUIRED, x, BT_REAL, dr, REQUIRED);
 +
-+  make_generic ("atand", GFC_ISYM_ATAN, GFC_STD_GNU);
++    add_sym_2 ("datan2d",GFC_ISYM_ATAN2,CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_datan2, gfc_simplify_atan2d, gfc_resolve_atan2d,
++        y, BT_REAL, dd, REQUIRED, x, BT_REAL, dd, REQUIRED);
 +
++    make_generic ("atan2d", GFC_ISYM_ATAN2, GFC_STD_GNU);
 +
-+  add_sym_2 ("atan2d",GFC_ISYM_ATAN2,CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+          GFC_STD_GNU, gfc_check_atan2, gfc_simplify_atan2d, gfc_resolve_atan2,
-+          y, BT_REAL, dr, REQUIRED, x, BT_REAL, dr, REQUIRED);
++    add_sym_1 ("cosd", GFC_ISYM_COS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dr, REQUIRED);
 +
-+  add_sym_2 ("datan2d",GFC_ISYM_ATAN2,CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+          GFC_STD_GNU, gfc_check_datan2, gfc_simplify_atan2d, gfc_resolve_atan2,
-+          y, BT_REAL, dd, REQUIRED, x, BT_REAL, dd, REQUIRED);
++    add_sym_1 ("dcosd", GFC_ISYM_COS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  make_generic ("atan2d", GFC_ISYM_ATAN2, GFC_STD_GNU);
++    make_generic ("cosd", GFC_ISYM_COS, GFC_STD_GNU);
 +
++    add_sym_1 ("cotan", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_rc2008, gfc_simplify_cotan, gfc_resolve_cotan,
++        x, BT_REAL, dr, REQUIRED);
 +
-+  add_sym_1 ("cosd", GFC_ISYM_COS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_cos,
-+             x, BT_REAL, dr, REQUIRED);
++    add_sym_1 ("dcotan", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_cotan, gfc_resolve_cotan,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  add_sym_1 ("dcosd", GFC_ISYM_COS, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_cos,
-+             x, BT_REAL, dd, REQUIRED);
++    make_generic ("cotan", GFC_ISYM_COTAN, GFC_STD_GNU);
 +
-+  make_generic ("cosd", GFC_ISYM_COS, GFC_STD_GNU);
++    add_sym_1 ("cotand", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dr, REQUIRED);
 +
++    add_sym_1 ("dcotand",GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  add_sym_1 ("cotan", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_cotan, gfc_resolve_tan,
-+                     x, BT_REAL, dr, REQUIRED);
++    make_generic ("cotand", GFC_ISYM_COTAN, GFC_STD_GNU);
 +
-+  add_sym_1 ("dcotan", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd,
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_cotan, gfc_resolve_tan,
-+             x, BT_REAL, dd, REQUIRED);
++    add_sym_1 ("sind", GFC_ISYM_SIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dr, REQUIRED);
 +
-+  make_generic ("cotan", GFC_ISYM_COTAN, GFC_STD_GNU);
++    add_sym_1 ("dsind", GFC_ISYM_SIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dd, REQUIRED);
 +
++    make_generic ("sind", GFC_ISYM_SIN, GFC_STD_GNU);
 +
-+  add_sym_1 ("cotand", GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr,
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_tan,
-+             x, BT_REAL, dr, REQUIRED);
++    add_sym_1 ("tand", GFC_ISYM_TAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dr, GFC_STD_GNU,
++        gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dr, REQUIRED);
++    
++    add_sym_1 ("dtand", GFC_ISYM_TAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL,
++        dd, GFC_STD_GNU,
++        gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_trigd,
++        x, BT_REAL, dd, REQUIRED);
 +
-+  add_sym_1 ("dcotand",GFC_ISYM_COTAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd,
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_tan,
-+             x, BT_REAL, dd, REQUIRED);
-+
-+  make_generic ("cotand", GFC_ISYM_COTAN, GFC_STD_GNU);
-+
-+
-+  add_sym_1 ("sind", GFC_ISYM_SIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr, 
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_sin,
-+             x, BT_REAL, dr, REQUIRED);
-+
-+  add_sym_1 ("dsind", GFC_ISYM_SIN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd, 
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_sin,
-+             x, BT_REAL, dd, REQUIRED);
-+
-+  make_generic ("sind", GFC_ISYM_SIN, GFC_STD_GNU);
-+
-+
-+  add_sym_1 ("tand", GFC_ISYM_TAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dr,
-+             GFC_STD_GNU, gfc_check_fn_r, gfc_simplify_trigd, gfc_resolve_tan,
-+             x, BT_REAL, dr, REQUIRED);
-+  
-+  add_sym_1 ("dtand", GFC_ISYM_TAN, CLASS_ELEMENTAL, ACTUAL_YES, BT_REAL, dd,
-+             GFC_STD_GNU, gfc_check_fn_d, gfc_simplify_trigd, gfc_resolve_tan,
-+             x, BT_REAL, dd, REQUIRED);
-+
-+  make_generic ("tand", GFC_ISYM_TAN, GFC_STD_GNU);
++    make_generic ("tand", GFC_ISYM_TAN, GFC_STD_GNU);
 +  }
  }
  
  
-@@ -3044,6 +3398,42 @@ add_subroutines (void)
+@@ -3044,6 +3408,42 @@ add_subroutines (void)
  	      t, BT_INTEGER, di, REQUIRED, INTENT_INOUT,
  	      tp, BT_INTEGER, di, REQUIRED, INTENT_IN);
  
@@ -4014,7 +4024,7 @@ index 7d78419..7922b24 100644
    add_sym_1s ("random_number", GFC_ISYM_RANDOM_NUMBER, CLASS_IMPURE,
  	      BT_UNKNOWN, 0, GFC_STD_F95,
  	      gfc_check_random_number, NULL, gfc_resolve_random_number,
-@@ -3249,6 +3639,7 @@ add_conv (bt from_type, int from_kind, bt to_type, int to_kind, int standard)
+@@ -3249,6 +3649,7 @@ add_conv (bt from_type, int from_kind, bt to_type, int to_kind, int standard)
  static void
  add_conversions (void)
  {
@@ -4022,7 +4032,7 @@ index 7d78419..7922b24 100644
    int i, j;
  
    /* Integer-Integer conversions.  */
-@@ -3336,14 +3727,18 @@ add_conversions (void)
+@@ -3336,14 +3737,18 @@ add_conversions (void)
        }
  
    /* Integer-Logical and Logical-Integer conversions.  */
@@ -4044,7 +4054,7 @@ index 7d78419..7922b24 100644
  	}
  }
  
-@@ -3775,6 +4170,32 @@ do_simplify (gfc_intrinsic_sym *specific, gfc_expr *e)
+@@ -3775,6 +4180,26 @@ do_simplify (gfc_intrinsic_sym *specific, gfc_expr *e)
        goto finish;
      }
  
@@ -4068,16 +4078,10 @@ index 7d78419..7922b24 100644
 +      goto finish;
 +    }
 +
-+  if (specific->simplify.f2 == gfc_simplify_atan2d)
-+    {
-+      result = gfc_simplify_atan2d (e, NULL);
-+      goto finish;
-+    }
-+
    if (specific->simplify.f1 == NULL)
      {
        result = NULL;
-@@ -4304,8 +4725,12 @@ gfc_convert_type_warn (gfc_expr *expr, gfc_typespec *ts, int eflag, int wflag)
+@@ -4304,8 +4729,12 @@ gfc_convert_type_warn (gfc_expr *expr, gfc_typespec *ts, int eflag, int wflag)
    if (sym == NULL)
      goto bad;
  
@@ -4093,7 +4097,7 @@ index 7d78419..7922b24 100644
        gfc_warning_now ("Extension: Conversion from %s to %s at %L",
  		       gfc_typename (&from_ts), gfc_typename (ts),
 diff --git a/gcc/fortran/intrinsic.h b/gcc/fortran/intrinsic.h
-index 5d50285..3a77d98 100644
+index 5d50285..24e8715 100644
 --- a/gcc/fortran/intrinsic.h
 +++ b/gcc/fortran/intrinsic.h
 @@ -67,6 +67,7 @@ gfc_try gfc_check_float (gfc_expr *);
@@ -4136,6 +4140,31 @@ index 5d50285..3a77d98 100644
  gfc_expr *gfc_simplify_trim (gfc_expr *);
  gfc_expr *gfc_simplify_ubound (gfc_expr *, gfc_expr *, gfc_expr *);
  gfc_expr *gfc_simplify_ucobound (gfc_expr *, gfc_expr *, gfc_expr *);
+@@ -416,6 +421,7 @@ void gfc_resolve_asinh (gfc_expr *, gfc_expr *);
+ void gfc_resolve_atan (gfc_expr *, gfc_expr *);
+ void gfc_resolve_atanh (gfc_expr *, gfc_expr *);
+ void gfc_resolve_atan2 (gfc_expr *, gfc_expr *, gfc_expr *);
++void gfc_resolve_atan2d (gfc_expr *, gfc_expr *, gfc_expr *);
+ void gfc_resolve_atomic_def (gfc_code *);
+ void gfc_resolve_atomic_ref (gfc_code *);
+ void gfc_resolve_besn (gfc_expr *, gfc_expr *, gfc_expr *);
+@@ -432,6 +438,7 @@ void gfc_resolve_conjg (gfc_expr *, gfc_expr *);
+ void gfc_resolve_cos (gfc_expr *, gfc_expr *);
+ void gfc_resolve_cosh (gfc_expr *, gfc_expr *);
+ void gfc_resolve_count (gfc_expr *, gfc_expr *, gfc_expr *, gfc_expr *);
++void gfc_resolve_cotan (gfc_expr *, gfc_expr *);
+ void gfc_resolve_cshift (gfc_expr *, gfc_expr *, gfc_expr *, gfc_expr *);
+ void gfc_resolve_ctime (gfc_expr *, gfc_expr *);
+ void gfc_resolve_dble (gfc_expr *, gfc_expr *);
+@@ -562,6 +569,8 @@ void gfc_resolve_time (gfc_expr *);
+ void gfc_resolve_time8 (gfc_expr *);
+ void gfc_resolve_transfer (gfc_expr *, gfc_expr *, gfc_expr *, gfc_expr *);
+ void gfc_resolve_transpose (gfc_expr *, gfc_expr *);
++void gfc_resolve_trigd (gfc_expr *, gfc_expr *);
++void gfc_resolve_atrigd (gfc_expr *, gfc_expr *);
+ void gfc_resolve_trim (gfc_expr *, gfc_expr *);
+ void gfc_resolve_ttynam (gfc_expr *, gfc_expr *);
+ void gfc_resolve_ubound (gfc_expr *, gfc_expr *, gfc_expr *, gfc_expr *);
 diff --git a/gcc/fortran/intrinsic.texi b/gcc/fortran/intrinsic.texi
 index a3b80aa..fa2080e 100644
 --- a/gcc/fortran/intrinsic.texi
@@ -5477,6 +5506,237 @@ index 2499c90..42f5649 100644
  IOPARM (close,   common,	0,	 common)
  IOPARM (close,   status,	1 << 7,  char1)
  IOPARM (filepos, common,	0,	 common)
+diff --git a/gcc/fortran/iresolve.c b/gcc/fortran/iresolve.c
+index 5b2f8c7..15b3c49 100644
+--- a/gcc/fortran/iresolve.c
++++ b/gcc/fortran/iresolve.c
+@@ -652,6 +652,87 @@ gfc_resolve_cosh (gfc_expr *f, gfc_expr *x)
+ }
+ 
+ 
++/* Our replacement of elements of a trig call with an EXPR_OP (e.g.
++   multiplying the result or operands by a factor to convert to/from degrees)
++   will cause the resolve_* function to be invoked again when resolving the
++   freshly created EXPR_OP. See gfc_resolve_trigd, gfc_resolve_atrigd,
++   gfc_resolve_cotan. We must observe this and avoid recursively creating
++   layers of nested EXPR_OP expressions.  */
++
++static bool
++is_trig_resolved (gfc_expr *f)
++{
++  /* We know we've already resolved the function if we see the lib call
++     starting with '__'.  */
++  return f->value.function.name != NULL
++    && 0 == strncmp("__", f->value.function.name, 2);
++}
++
++/* Return a shallow copy of the function expression f. The original expression
++   has its pointers cleared so that it may be freed without affecting the
++   shallow copy. This is similar to gfc_copy_expr, but doesn't perform a deep
++   copy of the argument list, allowing it to be reused somewhere else,
++   setting the expression up nicely for gfc_replace_expr.  */
++
++static gfc_expr *
++copy_replace_function_shallow (gfc_expr *f)
++{
++  gfc_expr *fcopy;
++  gfc_actual_arglist *args;
++
++  /* The only thing deep-copied in gfc_copy_expr() is args.  */
++  args = f->value.function.actual;
++  f->value.function.actual = NULL;
++  fcopy = gfc_copy_expr (f);
++  fcopy->value.function.actual = args;
++
++  /* Clear the old function so the shallow copy is not affected if the old
++     expression is freed.  */
++  f->value.function.name = NULL;
++  f->value.function.isym = NULL;
++  f->value.function.actual = NULL;
++  f->value.function.esym = NULL;
++  f->shape = NULL;
++  f->ref = NULL;
++
++  return fcopy;
++}
++
++
++/* Resolve cotan(x) = 1/tan(x).  */
++
++void
++gfc_resolve_cotan (gfc_expr *f, gfc_expr *x)
++{
++  gfc_expr *result, *fcopy, *one;
++
++  if (is_trig_resolved (f))
++    return;
++
++  gfc_resolve_tan (f, x);
++  one = gfc_get_constant_expr (f->ts.type, f->ts.kind, &f->where);
++
++  switch (f->ts.type)
++    {
++      case BT_REAL:
++        mpfr_set_ui (one->value.real, 1, GFC_RND_MODE);
++        break;
++
++      case BT_COMPLEX:
++        mpc_set_ui (one->value.complex, 1, GFC_MPC_RND_MODE);
++        break;
++
++      default:
++        gcc_unreachable ();
++    }
++
++  /* Replace f [tan(x)] with 1/f [cotan(x)].  */
++  fcopy = copy_replace_function_shallow (f);
++  result = gfc_divide (one, fcopy);
++  gfc_replace_expr (f, result);
++}
++
++
+ void
+ gfc_resolve_count (gfc_expr *f, gfc_expr *mask, gfc_expr *dim, gfc_expr *kind)
+ {
+@@ -2547,7 +2628,6 @@ gfc_resolve_system (gfc_expr *f, gfc_expr *n ATTRIBUTE_UNUSED)
+   f->value.function.name = gfc_get_string (PREFIX ("system"));
+ }
+ 
+-
+ void
+ gfc_resolve_tan (gfc_expr *f, gfc_expr *x)
+ {
+@@ -2566,6 +2646,130 @@ gfc_resolve_tanh (gfc_expr *f, gfc_expr *x)
+ }
+ 
+ 
++/* Build an expression for converting degrees to radians. */
++
++static gfc_expr *
++get_radians (gfc_expr *deg)
++{
++  mpfr_t tmp;
++  gfc_expr *result, *factor; /* pi / 180 */
++
++  gcc_assert (deg->ts.type == BT_REAL);
++
++  factor = gfc_get_constant_expr (deg->ts.type, deg->ts.kind, &deg->where);
++
++  /* Factor = pi / 180 */
++  mpfr_init (tmp);
++  mpfr_set_d (tmp, 180.0l, GFC_RND_MODE);
++  mpfr_const_pi (factor->value.real, GFC_RND_MODE);
++  mpfr_div (factor->value.real, factor->value.real, tmp, GFC_RND_MODE);
++  mpfr_clear (tmp);
++
++  /* rad = deg * (pi / 180) */
++  result = gfc_multiply (deg, factor);
++  return result;
++}
++
++
++/* Build an expression for converting radians to degrees. */
++
++static gfc_expr *
++get_degrees (gfc_expr *rad)
++{
++  mpfr_t tmp;
++  gfc_expr *result, *factor; /* 180 / pi */
++
++  gcc_assert (rad->ts.type == BT_REAL);
++
++  factor = gfc_get_constant_expr (rad->ts.type, rad->ts.kind, &rad->where);
++
++  /* Factor = 180 / pi */
++  mpfr_init (tmp);
++  mpfr_const_pi (tmp, GFC_RND_MODE);
++  mpfr_set_d (factor->value.real, 180.0l, GFC_RND_MODE);
++  mpfr_div (factor->value.real, factor->value.real, tmp, GFC_RND_MODE);
++  mpfr_clear (tmp);
++
++  /* deg = rad * (180 / pi) */
++  result = gfc_multiply (rad, factor);
++  return result;
++}
++
++
++/* Resolve a call to a trig function.  */
++
++static void
++resolve_trig_call (gfc_expr *f, gfc_expr *x)
++{
++  switch (f->value.function.isym->id)
++    {
++      case GFC_ISYM_ACOS:
++        return gfc_resolve_acos (f, x);
++      case GFC_ISYM_ASIN:
++        return gfc_resolve_asin (f, x);
++      case GFC_ISYM_ATAN:
++        return gfc_resolve_atan (f, x);
++      case GFC_ISYM_ATAN2:
++        /* NB. arg3 is unused for atan2 */
++        return gfc_resolve_atan2 (f, x, NULL);
++      case GFC_ISYM_COS:
++        return gfc_resolve_cos (f, x);
++      case GFC_ISYM_COTAN:
++        return gfc_resolve_cotan (f, x);
++      case GFC_ISYM_SIN:
++        return gfc_resolve_sin (f, x);
++      case GFC_ISYM_TAN:
++        return gfc_resolve_tan (f, x);
++      default: break;
++    }
++
++  gcc_unreachable ();
++}
++
++/* Resolve degree trig function as trigd(x) = trig(radians(x)).  */
++
++void
++gfc_resolve_trigd (gfc_expr *f, gfc_expr *x)
++{
++  if (is_trig_resolved (f))
++    return;
++
++  x = get_radians (x);
++  f->value.function.actual->expr = x;
++
++  resolve_trig_call (f, x);
++}
++
++
++/* Resolve degree inverse trig function as atrigd(x) = degrees(atrig(x)).  */
++
++void
++gfc_resolve_atrigd (gfc_expr *f, gfc_expr *x)
++{
++  gfc_expr *result, *fcopy;
++
++  if (is_trig_resolved (f))
++    return;
++
++  resolve_trig_call (f, x);
++
++  fcopy = copy_replace_function_shallow (f);
++  result = get_degrees (fcopy);
++  gfc_replace_expr (f, result);
++}
++
++
++/* Resolve atan2d(x) = degrees(atan2(x)).  */
++
++void
++gfc_resolve_atan2d (gfc_expr *f, gfc_expr *x, gfc_expr *y ATTRIBUTE_UNUSED)
++{
++  /* Note that we lose the second arg here - that's okay because it is
++     unused in gfc_resolve_atan2 anyway.  */
++  gfc_resolve_atrigd (f, x);
++}
++
++
+ void
+ gfc_resolve_image_index (gfc_expr *f, gfc_expr *array ATTRIBUTE_UNUSED,
+ 			 gfc_expr *sub ATTRIBUTE_UNUSED)
 diff --git a/gcc/fortran/lang.opt b/gcc/fortran/lang.opt
 index fbe8a1b..f7f66ed 100644
 --- a/gcc/fortran/lang.opt
@@ -9607,10 +9867,10 @@ index f714ed0..d762e6c 100644
      }
    else if (!S_ISDIR (st.st_mode))
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 65c65a3..804a96b 100644
+index 65c65a3..eca7da4 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
-@@ -1699,6 +1699,235 @@ gfc_simplify_conjg (gfc_expr *e)
+@@ -1699,6 +1699,144 @@ gfc_simplify_conjg (gfc_expr *e)
    return range_check (result, "CONJG");
  }
  
@@ -9633,7 +9893,7 @@ index 65c65a3..804a96b 100644
 +    case GFC_ISYM_COS:
 +        return gfc_simplify_cos (x);
 +    case GFC_ISYM_COTAN:
-+        return gfc_simplify_cotan (icall);
++        return gfc_simplify_cotan (x);
 +    case GFC_ISYM_SIN:
 +        return gfc_simplify_sin (x);
 +    case GFC_ISYM_TAN:
@@ -9684,207 +9944,114 @@ index 65c65a3..804a96b 100644
 +    mpfr_clear (tmp);
 +}
 +
-+/* Build an expression for converting degrees to radians. */
 +
-+static gfc_expr *
-+get_radians (gfc_expr *deg)
-+{
-+  mpfr_t tmp;
-+  gfc_expr *factor; /* pi / 180 */
-+
-+  gcc_assert (deg->ts.type == BT_REAL);
-+
-+  factor = gfc_get_constant_expr (deg->ts.type, deg->ts.kind, &deg->where);
-+
-+  /* Factor = pi / 180 */
-+  mpfr_init (tmp);
-+  mpfr_set_d (tmp, 180.0l, GFC_RND_MODE);
-+  mpfr_const_pi (factor->value.real, GFC_RND_MODE);
-+  mpfr_div (factor->value.real, factor->value.real, tmp, GFC_RND_MODE);
-+  mpfr_clear (tmp);
-+
-+  /* rad = deg * (pi / 180) */
-+  return gfc_multiply (deg, factor);
-+}
-+
-+/* Build an expression for converting radians to degrees. */
-+
-+static gfc_expr *
-+get_degrees (gfc_expr *rad)
-+{
-+  mpfr_t tmp;
-+  gfc_expr *factor; /* 180 / pi */
-+
-+  gcc_assert (rad->ts.type == BT_REAL);
-+
-+  factor = gfc_get_constant_expr (rad->ts.type, rad->ts.kind, &rad->where);
-+
-+  /* Factor = 180 / pi */
-+  mpfr_init (tmp);
-+  mpfr_const_pi (tmp, GFC_RND_MODE);
-+  mpfr_set_d (factor->value.real, 180.0l, GFC_RND_MODE);
-+  mpfr_div (factor->value.real, factor->value.real, tmp, GFC_RND_MODE);
-+  mpfr_clear (tmp);
-+
-+  /* deg = rad * (180 / pi) */
-+  return gfc_multiply (rad, factor);
-+}
-+
-+/* Convert argument from degrees to radians before calling the trig
-+   function in icall. */
++/* Convert argument to radians before calling a trig function.  */
 +
 +gfc_expr *
 +gfc_simplify_trigd (gfc_expr *icall)
 +{
-+  gfc_expr *x;
++  gfc_expr *arg;
 +
-+  /* The actual argument. */
-+  x = icall->value.function.actual->expr;
++  arg = icall->value.function.actual->expr;
 +
-+  if (x->ts.type != BT_REAL)
++  if (arg->ts.type != BT_REAL)
 +    gfc_internal_error ("in gfc_simplify_trigd(): Bad type");
 +
-+  if (x->expr_type == EXPR_CONSTANT)
-+      /* Convert constant to radians before passing off to simplifier. */
-+      radians_f (x->value.real, GFC_RND_MODE);
-+  else
-+      /* Argument expression is not constant: replace it with degree to radian
-+         conversion of original argument. */
-+      icall->value.function.actual->expr = get_radians (x);
++  if (arg->expr_type == EXPR_CONSTANT)
++    /* Convert constant to radians before passing off to simplifier. */
++    radians_f (arg->value.real, GFC_RND_MODE);
 +
-+  /* Let the actual simplifier take over; we just changed icall's argument. */
++  /* Let the usual simplifier take over - we just simplified the arg.  */
 +  return simplify_trig_call (icall);
 +}
 +
-+/* Convert result from degrees to radians after calling the inverse trig
-+   function in icall. */
++/* Convert result of an inverse trig function to degrees.  */
 +
 +gfc_expr *
 +gfc_simplify_atrigd (gfc_expr *icall)
 +{
-+  gfc_expr *x;
-+  gfc_actual_arglist *arg;
++  gfc_expr *result;
 +
-+  /* The actual argument. */
-+  x = icall->value.function.actual->expr;
-+
-+  if (x->ts.type != BT_REAL)
++  if (icall->value.function.actual->expr->ts.type != BT_REAL)
 +    gfc_internal_error ("in gfc_simplify_atrigd(): Bad type");
 +
 +  /* See if another simplifier has work to do first. */
-+  x = simplify_trig_call (icall);
++  result = simplify_trig_call (icall);
 +
-+  if (x && x->expr_type == EXPR_CONSTANT)
++  if (result && result->expr_type == EXPR_CONSTANT)
 +  {
 +      /* Convert constant to degrees after passing off to actual simplifier. */
-+      degrees_f (x->value.real, GFC_RND_MODE);
-+      return x;
++      degrees_f (result->value.real, GFC_RND_MODE);
++      return result;
 +  }
 +
-+  /* Expression was simplified. The old icall will be freed by do_simplify. */
-+  else if (x != NULL)
-+      icall = x;
-+
-+  /* Expression was not simplified. We must copy icall because do_simplify
-+     will free it. We must carefully copy value.function by hand, as future
-+     functions depend on its fields and gfc_copy_expr does not do this. */
-+  else
-+  {
-+      x = gfc_copy_expr (icall);
-+      /* arg is the only thing in value.function copied by gfc_copy_expr;
-+         do not overwrite the pointer to the new copy. */
-+      arg = x->value.function.actual;
-+      x->value = icall->value;
-+      x->value.function.actual = arg;
-+      icall = x;
-+      /* Resolve manually since do_simplify assumes we're done with x. */
-+      (*icall->value.function.isym->resolve.f1) (icall, arg->expr);
-+  }
-+
-+  /* Return expression for converting the result to degrees. */
-+  return get_degrees (icall);
++  /* Let gfc_resolve_atrigd take care of the non-constant case.  */
++  return NULL;
 +}
 +
-+/* This has to look like a two-parameter function, but its call is
-+   intercepted by do_simplify because we need to have the handle to the
-+   actual function call to wrap it in get_degrees. */
++/* Convert the result of atan2 to degrees.  */
 +
 +gfc_expr *
-+gfc_simplify_atan2d (gfc_expr *icall, gfc_expr *dummy ATTRIBUTE_UNUSED)
++gfc_simplify_atan2d (gfc_expr *y, gfc_expr *x)
 +{
-+  gfc_expr *result, *y, *x;
-+  gfc_actual_arglist *arg;
-+  y = icall->value.function.actual->expr;
-+  x = icall->value.function.actual->next->expr;
++  gfc_expr *result;
 +
 +  if (x->ts.type != BT_REAL || y->ts.type != BT_REAL)
 +    gfc_internal_error ("in gfc_simplify_atan2d(): Bad type");
 +
 +  if (x->expr_type == EXPR_CONSTANT && y->expr_type == EXPR_CONSTANT)
-+  {
++    {
 +      result = gfc_simplify_atan2 (y, x);
-+      degrees_f (result->value.real, GFC_RND_MODE);
-+      return result;
-+  }
++      if (result != NULL)
++        {
++          degrees_f (result->value.real, GFC_RND_MODE);
++          return result;
++        }
++    }
 +
-+  /* Argument expression is not constant: replace result with radian to degree
-+     conversion. We must use a copy here because do_simplify will replace (free)
-+     the original expression. The value is not copied by gfc_copy_expr, but the
-+     actual arg is. */
-+  result = gfc_copy_expr (icall);
-+  arg = result->value.function.actual; /* Copy of icall's actual */
-+  result->value = icall->value;
-+  result->value.function.actual = arg;
-+  icall = result;
-+
-+  /* Resolve manually since do_simplify assumes we're done with result. */
-+  (*icall->value.function.isym->resolve.f2) (icall, x, y);
-+  result = get_degrees (icall);
-+
-+  return result;
++  /* Let gfc_resolve_atan2d take care of the non-constant case.  */
++  return NULL;
 +}
  
  gfc_expr *
  gfc_simplify_cos (gfc_expr *x)
-@@ -5945,6 +6174,45 @@ gfc_simplify_sum (gfc_expr *array, gfc_expr *dim, gfc_expr *mask)
+@@ -5945,6 +6083,43 @@ gfc_simplify_sum (gfc_expr *array, gfc_expr *dim, gfc_expr *mask)
  
  
  gfc_expr *
-+gfc_simplify_cotan (gfc_expr *icall)
++gfc_simplify_cotan (gfc_expr *x)
 +{
-+  gfc_actual_arglist *arg;
-+  gfc_expr *result, *x;
-+  x = icall->value.function.actual->expr;
++  gfc_expr *result;
++  mpc_t one, *val;
 +
-+  gcc_assert (x->ts.type == BT_REAL);
++  if (x->expr_type != EXPR_CONSTANT)
++    return NULL;
 +
-+  /* Compute the result for constant expressions at compile-time. */
-+  if (x->expr_type == EXPR_CONSTANT)
-+  {
-+    result = gfc_get_constant_expr (x->ts.type, x->ts.kind, &x->where);
-+    mpfr_cot (result->value.real, x->value.real, GFC_RND_MODE);
-+    return range_check (result, "COTAN");
-+  }
++  result = gfc_get_constant_expr (x->ts.type, x->ts.kind, &x->where);
 +
-+  /* Expression is not constant; generate inverse of tangent expression.
-+     We must copy icall because do_simplify will free it. We must carefully
-+     copy value.function by hand, as future functions depend on its fields 
-+     and gfc_copy_expr does not do this. */
-+  x = gfc_copy_expr (icall);
-+  /* arg is the only thing in value.function copied by gfc_copy_expr;
-+     do not overwrite the pointer to the new copy. */
-+  arg = x->value.function.actual;
-+  x->value = icall->value;
-+  x->value.function.actual = arg;
-+  icall = x;
++  switch (x->ts.type)
++    {
++      case BT_REAL:
++        mpfr_cot (result->value.real, x->value.real, GFC_RND_MODE);
++        break;
 +
-+  /* Resolve first, since do_simplify assumes we are done with result. */
-+  (*icall->value.function.isym->resolve.f1) (icall, arg->expr);
++      case BT_COMPLEX:
++        mpc_init2 (one, mpfr_get_default_prec ());
++        mpc_set_ui (one, 1, GFC_MPC_RND_MODE);
 +
-+  /* cotan = 1 / tan */
-+  x = gfc_get_constant_expr (icall->ts.type, icall->ts.kind, &icall->where);
-+  mpfr_set_d (x->value.real, 1.0l, GFC_RND_MODE);
-+  return gfc_divide (x, icall); 
++        /* There is no builtin mpc_cot, so compute x = 1 / tan(x).  */
++        val = &result->value.complex;
++        mpc_tan (*val, *val, GFC_MPC_RND_MODE);
++        mpc_div (*val, one, *val, GFC_MPC_RND_MODE); 
++
++        mpc_clear (one);
++        break;
++
++      default:
++        gcc_unreachable ();
++    }
++
++  return range_check (result, "COTAN");
 +}
 +
 +
@@ -10962,150 +11129,6 @@ index 0000000..eb49db8
 +    return
 +  end function Up
 +end
-diff --git a/gcc/testsuite/gfortran.dg/dec/acos.f b/gcc/testsuite/gfortran.dg/dec/acos.f
-new file mode 100644
-index 0000000..ef95933
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/acos.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do compile }
-+      ! { dg-options "-fdec-structure" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 0.68032123_4
-+      D_I = 0.68032123_8
-+      !Q_I = 0.68032123_16
-+
-+      ! Expected
-+      F_OE = 0.822595489748_4
-+      D_OE = 0.822595489748_8
-+      !Q_OE = 0.822595489748_16
-+
-+      ! Actual
-+      F_OA =  ACOS (F_I)
-+      F_OC =  ACOS (0.68032123_4)
-+      D_OA = DACOS (D_I)
-+      D_OC = DACOS (0.68032123_8)
-+      !Q_OA = QACOS (Q_I)
-+      !Q_OC = QACOS (0.68032123_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/acosd.f b/gcc/testsuite/gfortran.dg/dec/acosd.f
-new file mode 100644
-index 0000000..3c70b9d
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/acosd.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 0.68032123_4
-+      D_I = 0.68032123_8
-+      !Q_I = 0.68032123_16
-+
-+      ! Expected
-+      F_OE = 47.131249809_4
-+      D_OE = 47.131249809_8
-+      !Q_OE = 47.131249809_16
-+
-+      ! Actual
-+      F_OA =  ACOSD (F_I)
-+      F_OC =  ACOSD (0.68032123_4)
-+      D_OA = DACOSD (D_I)
-+      D_OC = DACOSD (0.68032123_8)
-+      !Q_OA = QACOSD (Q_I)
-+      !Q_OC = QACOSD (0.68032123_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/asin.f b/gcc/testsuite/gfortran.dg/dec/asin.f
-new file mode 100644
-index 0000000..9c26039
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/asin.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 0.79345021_4
-+      D_I = 0.79345021_8
-+      !Q_I = 0.79345021_16
-+
-+      ! Expected
-+      F_OE = 0.916456999698_4
-+      D_OE = 0.916456999698_8
-+      !Q_OE = 0.916456999698_16
-+
-+      ! Actual
-+      F_OA =  ASIN (F_I)
-+      F_OC =  ASIN (0.79345021_4)
-+      D_OA = DASIN (D_I)
-+      D_OC = DASIN (0.79345021_8)
-+      !Q_OA = QASIN (Q_I)
-+      !Q_OC = QASIN (0.79345021_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/asind.f b/gcc/testsuite/gfortran.dg/dec/asind.f
-new file mode 100644
-index 0000000..4c24331
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/asind.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 0.79345021_4
-+      D_I = 0.79345021_8
-+      !Q_I = 0.79345021_16
-+
-+      ! Expected
-+      F_OE = 52.5091181879_4
-+      D_OE = 52.5091181879_8
-+      !Q_OE = 52.5091181879_16
-+
-+      ! Actual
-+      F_OA =  ASIND (F_I)
-+      F_OC =  ASIND (0.79345021_4)
-+      D_OA = DASIND (D_I)
-+      D_OC = DASIND (0.79345021_8)
-+      !Q_OA = QASIND (Q_I)
-+      !Q_OC = QASIND (0.79345021_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/assert.inc b/gcc/testsuite/gfortran.dg/dec/assert.inc
 new file mode 100644
 index 0000000..40512b0
@@ -11174,130 +11197,6 @@ index 0000000..40512b0
 +          call abort
 +        endif
 +      endsubroutine
-diff --git a/gcc/testsuite/gfortran.dg/dec/atan.f b/gcc/testsuite/gfortran.dg/dec/atan.f
-new file mode 100644
-index 0000000..de226c4
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atan.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 1.5874993_4
-+      D_I = 1.5874993_8
-+      !Q_I = 1.5874993_16
-+
-+      ! Expected
-+      F_OE = 1.00866575383_4
-+      D_OE = 1.00866575383_8
-+      !Q_OE = 1.00866575383_16
-+
-+      ! Actual
-+      F_OA =  ATAN (F_I)
-+      F_OC =  ATAN (1.5874993_4)
-+      D_OA = DATAN (D_I)
-+      D_OC = DATAN (1.5874993_8)
-+      !Q_OA = QATAN (Q_I)
-+      !Q_OC = QATAN (1.5874993_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/atan2d.f b/gcc/testsuite/gfortran.dg/dec/atan2d.f
-new file mode 100644
-index 0000000..67183ec
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atan2d.f
-@@ -0,0 +1,46 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      IMPLICIT NONE
-+
-+      LOGICAL f_eqt, d_eqt!, q_eqt
-+      LOGICAL BF, CF, BD, CD!, BQ, CQ
-+      CHARACTER*12 E, A
-+
-+      ! in,   out expected,   out actual,   out from constant input
-+      REAL*4  F_I1, F_I2, F_OE, F_OA, F_OC, F_TOL
-+      REAL*8  D_I1, D_I2, D_OE, D_OA, D_OC, D_TOL
-+      !REAL*16 Q_I1, Q_I2, Q_OE, Q_OA, Q_OC, Q_TOL
-+
-+      F_TOL = 5e-5_4
-+      D_TOL = 5e-6_8
-+      !Q_TOL = 5e-6_16
-+
-+      ! Input
-+      F_I1 = 2.679676_4
-+      F_I2 = 1.0_4
-+      D_I1 = 2.679676_8
-+      D_I2 = 1.0_8
-+      !Q_I1 = 2.679676_16
-+      !Q_I2 = 1.0_16
-+
-+      ! Expected
-+      F_OE = 69.53546_4
-+      D_OE = 69.53546_8
-+      !Q_OE = 69.53546_16
-+
-+      ! Actual
-+      F_OA =  ATAN2D (F_I1, F_I2)
-+      F_OC =  ATAN2D (2.679676_4, 1.0_4)
-+      D_OA = DATAN2D (D_I1, D_I2)
-+      D_OC = DATAN2D (2.679676_8, 1.0_8)
-+      !Q_OA = QATAN2D (Q_I1, Q_I2)
-+      !Q_OC = QATAN2D (2.679676_16, 1.0_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/atand.f b/gcc/testsuite/gfortran.dg/dec/atand.f
-new file mode 100644
-index 0000000..796fe1f
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/atand.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 1.5874993_4
-+      D_I = 1.5874993_8
-+      !Q_I = 1.5874993_16
-+
-+      ! Expected
-+      F_OE = 57.7922906336_4
-+      D_OE = 57.7922906336_8
-+      !Q_OE = 57.7922906336_16
-+
-+      ! Actual
-+      F_OA =  ATAND (F_I)
-+      F_OC =  ATAND (1.5874993_4)
-+      D_OA = DATAND (D_I)
-+      D_OC = DATAND (1.5874993_8)
-+      !Q_OA = QATAND (Q_I)
-+      !Q_OC = QATAND (1.5874993_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_btest.f b/gcc/testsuite/gfortran.dg/dec/bijk_btest.f
 new file mode 100644
 index 0000000..f21cb1a
@@ -12360,207 +12259,6 @@ index 0000000..7a128c4
 +	 END MAP
 +	END UNION
 +	END STRUCTURE
-diff --git a/gcc/testsuite/gfortran.dg/dec/check.inc b/gcc/testsuite/gfortran.dg/dec/check.inc
-new file mode 100644
-index 0000000..b418369
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/check.inc
-@@ -0,0 +1,24 @@
-+      BF = f_eqt(F_OE, F_OA, F_TOL)
-+      CF = f_eqt(F_OE, F_OC, F_TOL)
-+      BD = d_eqt(D_OE, D_OA, D_TOL)
-+      CD = d_eqt(D_OE, D_OC, D_TOL)
-+      !BQ = q_eqt(Q_OE, Q_OA, Q_TOL)
-+      !CQ = q_eqt(Q_OE, Q_OC, Q_TOL)
-+
-+      WRITE (E, '(F10.6)') F_OE
-+      WRITE (A, '(F10.6)') F_OA
-+      call fail_on_false(BF, "F ", E, A)
-+      WRITE (A, '(F10.6)') F_OC
-+      call fail_on_false(CF, "CF", E, A)
-+
-+      WRITE (E, '(F10.6)') D_OE
-+      WRITE (A, '(F10.6)') D_OA
-+      call fail_on_false(BD, "D ", E, A)
-+      WRITE (A, '(F10.6)') D_OC
-+      call fail_on_false(CD, "CD", E, A)
-+
-+      !WRITE (E, '(F10.6)') Q_OE
-+      !WRITE (A, '(F10.6)') Q_OA
-+      !call fail_on_false(BQ, "Q ", E, A)
-+      !WRITE (A, '(F10.6)') Q_OC
-+      !call fail_on_false(CQ, "CQ", E, A)
-diff --git a/gcc/testsuite/gfortran.dg/dec/checkf.inc b/gcc/testsuite/gfortran.dg/dec/checkf.inc
-new file mode 100644
-index 0000000..544b318
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/checkf.inc
-@@ -0,0 +1,19 @@
-+      SUBROUTINE fail_on_true(bool, msg, e, a)
-+        IMPLICIT NONE
-+        LOGICAL, INTENT (IN) :: bool
-+        CHARACTER(*), INTENT (IN) :: msg, e, a
-+        if ( bool ) then
-+          print *, msg, "FAIL!!!! exp: ", e, " act: ", a
-+          call abort
-+        endif
-+      END
-+
-+      SUBROUTINE fail_on_false(bool, msg, e, a)
-+        IMPLICIT NONE
-+        LOGICAL, INTENT (IN) :: bool
-+        CHARACTER(*), INTENT (IN) :: msg, e, a
-+        if ( .not. bool ) then
-+          print *, "(", msg, ") FAIL!!!! exp: ", e, " act: ", a
-+          call abort
-+        endif
-+      END
-diff --git a/gcc/testsuite/gfortran.dg/dec/cos.f b/gcc/testsuite/gfortran.dg/dec/cos.f
-new file mode 100644
-index 0000000..dbb3f81
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cos.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 1.0471975512_4
-+      D_I = 1.0471975512_8
-+      !Q_I = 1.0471975512_16
-+
-+      ! Expected
-+      F_OE = 0.5_4
-+      D_OE = 0.5_8
-+      !Q_OE = 0.5_16
-+
-+      ! Actual
-+      F_OA =  COS (F_I)
-+      F_OC =  COS (1.0471975512_4)
-+      D_OA = DCOS (D_I)
-+      D_OC = DCOS (1.0471975512_8)
-+      !Q_OA = QCOS (Q_I)
-+      !Q_OC = QCOS (1.0471975512_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cosd.f b/gcc/testsuite/gfortran.dg/dec/cosd.f
-new file mode 100644
-index 0000000..d7bded5
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cosd.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 60.0_4
-+      D_I = 60.0_8
-+      !Q_I = 60.0_16
-+
-+      ! Expected
-+      F_OE = 0.5_4
-+      D_OE = 0.5_8
-+      !Q_OE = 0.5_16
-+
-+      ! Actual
-+      F_OA =  COSD (F_I)
-+      F_OC =  COSD (60.0_4)
-+      D_OA = DCOSD (D_I)
-+      D_OC = DCOSD (60.0_8)
-+      !Q_OA = QCOSD (Q_I)
-+      !Q_OC = QCOSD (60.0_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cotan.f b/gcc/testsuite/gfortran.dg/dec/cotan.f
-new file mode 100644
-index 0000000..e2ace4a
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cotan.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 0.6_4
-+      D_I = 0.6_8
-+      !Q_I = 0.6_16
-+
-+      ! Expected
-+      F_OE = 1.46169594708_4
-+      D_OE = 1.46169594708_8
-+      !Q_OE = 1.46169594708_16
-+
-+      ! Actual
-+      F_OA =  COTAN (F_I)
-+      F_OC =  COTAN (0.6_4)
-+      D_OA = DCOTAN (D_I)
-+      D_OC = DCOTAN (0.6_8)
-+      !Q_OA = QCOTAN (Q_I)
-+      !Q_OC = QCOTAN (0.6_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/cotand.f b/gcc/testsuite/gfortran.dg/dec/cotand.f
-new file mode 100644
-index 0000000..d1824cc
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/cotand.f
-@@ -0,0 +1,32 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      F_TOL = 5e-5_4
-+
-+      ! Input
-+      F_I = 0.6_4
-+      D_I = 0.6_8
-+      !Q_I = 0.6_16
-+
-+      ! Expected
-+      F_OE = 95.4894751711_4
-+      D_OE = 95.4894751711_8
-+      !Q_OE = 95.4894751711_16
-+
-+      ! Actual
-+      F_OA =  COTAND (F_I)
-+      F_OC =  COTAND (0.6_4)
-+      D_OA = DCOTAND (D_I)
-+      D_OC = DCOTAND (0.6_8)
-+      !Q_OA = QCOTAND (Q_I)
-+      !Q_OC = QCOTAND (0.6_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/cray_assumed.f b/gcc/testsuite/gfortran.dg/dec/cray_assumed.f
 new file mode 100644
 index 0000000..cffd04a
@@ -12582,26 +12280,6 @@ index 0000000..cffd04a
 +      pointer (y_ptr, y)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/decl.inc b/gcc/testsuite/gfortran.dg/dec/decl.inc
-new file mode 100644
-index 0000000..7989896
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/decl.inc
-@@ -0,0 +1,14 @@
-+      IMPLICIT NONE
-+
-+      LOGICAL f_eqt, d_eqt!, q_eqt
-+      LOGICAL BF, CF, BD, CD!, BQ, CQ
-+      CHARACTER*12 E, A
-+
-+      ! in,   out expected,   out actual,   out from constant input
-+      REAL*4  F_I, F_OE, F_OA, F_OC, F_TOL
-+      REAL*8  D_I, D_OE, D_OA, D_OC, D_TOL
-+      !REAL*16 Q_I, Q_OE, Q_OA, Q_OC, Q_TOL
-+
-+      F_TOL = 5e-6_4
-+      D_TOL = 5e-6_8
-+      !Q_TOL = 5e-6_16
 diff --git a/gcc/testsuite/gfortran.dg/dec/dlines.f b/gcc/testsuite/gfortran.dg/dec/dlines.f
 new file mode 100644
 index 0000000..4134130
@@ -13328,41 +13006,6 @@ index 0000000..9df0916
 +      j = x.z ! { dg-error "is not a member of" }
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/eqt.inc b/gcc/testsuite/gfortran.dg/dec/eqt.inc
-new file mode 100644
-index 0000000..240186c
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/eqt.inc
-@@ -0,0 +1,29 @@
-+      LOGICAL*4 FUNCTION f_eqt(fe, fa, t)
-+        IMPLICIT NONE
-+        REAL*4, INTENT (IN) :: fe
-+        REAL*4, INTENT (IN) :: fa
-+        REAL*4, INTENT (IN) :: t
-+        REAL*4 diff
-+        diff = ABS(fa - fe)
-+        f_eqt = diff .lt. t
-+      END
-+
-+      LOGICAL*4 FUNCTION d_eqt(de, da, t)
-+        IMPLICIT NONE
-+        REAL*8, INTENT (IN) :: de
-+        REAL*8, INTENT (IN) :: da
-+        REAL*8, INTENT (IN) :: t
-+        REAL*8 diff
-+        diff = DABS(da - de)
-+        d_eqt = diff .lt. t
-+      END
-+
-+      !LOGICAL*4 FUNCTION q_eqt(qe, qa, t)
-+      !  IMPLICIT NONE
-+      !  REAL*16, INTENT (IN) :: qe
-+      !  REAL*16, INTENT (IN) :: qa
-+      !  REAL*16, INTENT (IN) :: t
-+      !  REAL*16 diff
-+      !  diff = QABS(qa - qe)
-+      !  q_eqt = diff .lt. t
-+      !END
 diff --git a/gcc/testsuite/gfortran.dg/dec/exint_1.f b/gcc/testsuite/gfortran.dg/dec/exint_1.f
 new file mode 100644
 index 0000000..8267536
@@ -14090,6 +13733,299 @@ index 0000000..2b8655e
 +      call assertll ("loc", i, j)
 +
 +      end program
+diff --git a/gcc/testsuite/gfortran.dg/dec/math.f90 b/gcc/testsuite/gfortran.dg/dec/math.f90
+new file mode 100644
+index 0000000..d9960b1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/math.f90
+@@ -0,0 +1,287 @@
++! { dg-options "-fdec-math" }
++! { dg-do run }
++!
++! Test extra math intrinsics offered by -fdec-math.
++!
++
++  subroutine cmpf(f1, f2, tolerance, str)
++    implicit none
++    real(4), intent(in) :: f1, f2, tolerance
++    character(len=*), intent(in) :: str
++    if ( abs(f2 - f1) .gt. tolerance ) then
++      write (*, '(A,F12.6,F12.6)') str, f1, f2
++      call abort()
++    endif
++  endsubroutine
++
++  subroutine cmpd(d1, d2, tolerance, str)
++    implicit none
++    real(8), intent(in) :: d1, d2, tolerance
++    character(len=*), intent(in) :: str
++    if ( dabs(d2 - d1) .gt. tolerance ) then
++      write (*, '(A,F12.6,F12.6)') str, d1, d2
++      call abort()
++    endif
++  endsubroutine
++
++implicit none
++
++  real(4), parameter :: pi_f = (4.0_4 *  atan(1.0_4))
++  real(8), parameter :: pi_d = (4.0_8 * datan(1.0_8))
++  real(4), parameter :: r2d_f = 180.0_4 / pi_f
++  real(8), parameter :: r2d_d = 180.0_8 / pi_d
++  real(4), parameter :: d2r_f = pi_f / 180.0_4
++  real(8), parameter :: d2r_d = pi_d / 180.0_8
++
++! inputs
++real(4) :: xf, f_i1, f_i2
++real(8) :: xd, d_i1, d_i2
++
++! expected outputs from (oe) default (oxe) expression
++real(4) :: f_oe, f_oxe
++real(8) :: d_oe, d_oxe
++
++! actual outputs from (oa) default (oc) constant (ox) expression
++real(4) :: f_oa, f_oc, f_ox
++real(8) :: d_oa, d_oc, d_ox
++
++! tolerance of the answer: assert |exp-act| <= tol
++real(4) :: f_tol
++real(8) :: d_tol
++
++! equivalence tolerance
++f_tol = 5e-5_4
++d_tol = 5e-6_8
++
++! multiplication factors to test non-constant expressions
++xf = 2.0_4
++xd = 2.0_8
++
++! Input
++f_i1 = 0.68032123_4
++d_i1 = 0.68032123_8
++
++! Expected
++f_oe =     r2d_f*acos (f_i1)
++f_oxe = xf*r2d_f*acos (f_i1)
++d_oe =     r2d_d*dacos(d_i1)
++d_oxe = xd*r2d_d*dacos(d_i1)
++
++! Actual
++f_oa =    acosd (f_i1)
++f_oc =    acosd (0.68032123_4)
++f_ox = xf*acosd (f_i1)
++d_oa =    dacosd (d_i1)
++d_oc =    dacosd (0.68032123_8)
++d_ox = xd*dacosd (0.68032123_8)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) acosd")
++call cmpf(f_oe,  f_oc, f_tol, "(c) acosd")
++call cmpf(f_oxe, f_ox, f_tol, "(x) acosd")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dacosd")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dacosd")
++call cmpd(d_oxe, d_ox, d_tol, "(x) dacosd")
++
++! Input
++f_i1 = 60.0_4
++d_i1 = 60.0_8
++
++! Expected
++f_oe  =    cos (d2r_f*f_i1)
++f_oxe = xf*cos (d2r_f*f_i1)
++d_oe  =    cos (d2r_d*d_i1)
++d_oxe = xd*cos (d2r_d*d_i1)
++
++! Actual
++f_oa =     cosd (f_i1)
++f_oc =     cosd (60.0_4)
++f_ox = xf* cosd (f_i1)
++d_oa =    dcosd (d_i1)
++d_oc =    dcosd (60.0_8)
++d_ox = xd* cosd (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) cosd")
++call cmpf(f_oe,  f_oc, f_tol, "(c) cosd")
++call cmpf(f_oxe, f_ox, f_tol, "(x) cosd")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dcosd")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dcosd")
++call cmpd(d_oxe, d_ox, d_tol, "(x) cosd")
++
++! Input
++f_i1 = 0.79345021_4
++d_i1 = 0.79345021_8
++
++! Expected
++f_oe  =    r2d_f*asin (f_i1)
++f_oxe = xf*r2d_f*asin (f_i1)
++d_oe  =    r2d_d*asin (d_i1)
++d_oxe = xd*r2d_d*asin (d_i1)
++
++! Actual
++f_oa =     asind (f_i1)
++f_oc =     asind (0.79345021_4)
++f_ox = xf* asind (f_i1)
++d_oa =    dasind (d_i1)
++d_oc =    dasind (0.79345021_8)
++d_ox = xd* asind (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) asind")
++call cmpf(f_oe,  f_oc, f_tol, "(c) asind")
++call cmpf(f_oxe, f_ox, f_tol, "(x) asind")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dasind")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dasind")
++call cmpd(d_oxe, d_ox, d_tol, "(x) asind")
++
++! Input
++f_i1 = 60.0_4
++d_i1 = 60.0_8
++
++! Expected
++f_oe  =    sin (d2r_f*f_i1)
++f_oxe = xf*sin (d2r_f*f_i1)
++d_oe  =    sin (d2r_d*d_i1)
++d_oxe = xd*sin (d2r_d*d_i1)
++
++! Actual
++f_oa =     sind (f_i1)
++f_oc =     sind (60.0_4)
++f_ox = xf* sind (f_i1)
++d_oa =    dsind (d_i1)
++d_oc =    dsind (60.0_8)
++d_ox = xd* sind (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) sind")
++call cmpf(f_oe,  f_oc, f_tol, "(c) sind")
++call cmpf(f_oxe, f_ox, f_tol, "(x) sind")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dsind")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dsind")
++call cmpd(d_oxe, d_ox, d_tol, "(x) sind")
++
++! Input
++f_i1 = 2.679676_4
++f_i2 = 1.0_4
++d_i1 = 2.679676_8
++d_i2 = 1.0_8
++
++! Expected
++f_oe  =    r2d_f*atan2 (f_i1, f_i2)
++f_oxe = xf*r2d_f*atan2 (f_i1, f_i2)
++d_oe  =    r2d_d*atan2 (d_i1, d_i2)
++d_oxe = xd*r2d_d*atan2 (d_i1, d_i2)
++
++! Actual
++f_oa =     atan2d (f_i1, f_i2)
++f_oc =     atan2d (2.679676_4, 1.0_4)
++f_ox = xf* atan2d (f_i1, f_i2)
++d_oa =    datan2d (d_i1, d_i2)
++d_oc =    datan2d (2.679676_8, 1.0_8)
++d_ox = xd* atan2d (d_i1, d_i2)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) atan2d")
++call cmpf(f_oe,  f_oc, f_tol, "(c) atan2d")
++call cmpf(f_oxe, f_ox, f_tol, "(x) atan2d")
++call cmpd(d_oe,  d_oa, d_tol, "( ) datan2d")
++call cmpd(d_oe,  d_oc, d_tol, "(c) datan2d")
++call cmpd(d_oxe, d_ox, d_tol, "(x) atan2d")
++
++! Input
++f_i1 = 1.5874993_4
++d_i1 = 1.5874993_8
++
++! Expected
++f_oe  =    r2d_f*atan (f_i1)
++f_oxe = xf*r2d_f*atan (f_i1)
++d_oe  =    r2d_d*atan (d_i1)
++d_oxe = xd*r2d_d*atan (d_i1)
++
++! Actual
++f_oa =     atand (f_i1)
++f_oc =     atand (1.5874993_4)
++f_ox = xf* atand (f_i1)
++d_oa =    datand (d_i1)
++d_oc =    datand (1.5874993_8)
++d_ox = xd* atand (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) atand")
++call cmpf(f_oe,  f_oc, f_tol, "(c) atand")
++call cmpf(f_oxe, f_ox, f_tol, "(x) atand")
++call cmpd(d_oe,  d_oa, d_tol, "( ) datand")
++call cmpd(d_oe,  d_oc, d_tol, "(c) datand")
++call cmpd(d_oxe, d_ox, d_tol, "(x) atand")
++
++! Input
++f_i1 = 0.6_4
++d_i1 = 0.6_8
++
++! Expected
++f_oe  =    cotan (d2r_f*f_i1)
++f_oxe = xf*cotan (d2r_f*f_i1)
++d_oe  =    cotan (d2r_d*d_i1)
++d_oxe = xd*cotan (d2r_d*d_i1)
++
++! Actual
++f_oa =     cotand (f_i1)
++f_oc =     cotand (0.6_4)
++f_ox = xf* cotand (f_i1)
++d_oa =    dcotand (d_i1)
++d_oc =    dcotand (0.6_8)
++d_ox = xd* cotand (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) cotand")
++call cmpf(f_oe,  f_oc, f_tol, "(c) cotand")
++call cmpf(f_oxe, f_ox, f_tol, "(x) cotand")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dcotand")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dcotand")
++call cmpd(d_oxe, d_ox, d_tol, "(x) cotand")
++
++! Input
++f_i1 = 0.6_4
++d_i1 = 0.6_8
++
++! Expected
++f_oe  =     1.0_4/tan (f_i1)
++f_oxe = xf* 1.0_4/tan (f_i1)
++d_oe  =    1.0_8/dtan (d_i1)
++d_oxe = xd*1.0_8/dtan (d_i1)
++
++! Actual
++f_oa =     cotan (f_i1)
++f_oc =     cotan (0.6_4)
++f_ox = xf* cotan (f_i1)
++d_oa =    dcotan (d_i1)
++d_oc =    dcotan (0.6_8)
++d_ox = xd* cotan (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) cotan")
++call cmpf(f_oe,  f_oc, f_tol, "(c) cotan")
++call cmpf(f_oxe, f_ox, f_tol, "(x) cotan")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dcotan")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dcotan")
++call cmpd(d_oxe, d_ox, d_tol, "(x) cotan")
++
++! Input
++f_i1 = 60.0_4
++d_i1 = 60.0_8
++
++! Expected
++f_oe  =    tan (d2r_f*f_i1)
++f_oxe = xf*tan (d2r_f*f_i1)
++d_oe  =    tan (d2r_d*d_i1)
++d_oxe = xd*tan (d2r_d*d_i1)
++
++! Actual
++f_oa =     tand (f_i1)
++f_oc =     tand (60.0_4)
++f_ox = xf* tand (f_i1)
++d_oa =    dtand (d_i1)
++d_oc =    dtand (60.0_8)
++d_ox = xd* tand (d_i1)
++
++call cmpf(f_oe,  f_oa, f_tol, "( ) tand")
++call cmpf(f_oe,  f_oc, f_tol, "(c) tand")
++call cmpf(f_oxe, f_ox, f_tol, "(x) tand")
++call cmpd(d_oe,  d_oa, d_tol, "( ) dtand")
++call cmpd(d_oe,  d_oc, d_tol, "(c) dtand")
++call cmpd(d_oxe, d_ox, d_tol, "(x) tand")
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot1.for b/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot1.for
 new file mode 100644
 index 0000000..514cd11
@@ -14288,78 +14224,6 @@ index 0000000..a65172d
 +8     format (z5,z5,z5)
 +
 +      end program main
-diff --git a/gcc/testsuite/gfortran.dg/dec/sin.f b/gcc/testsuite/gfortran.dg/dec/sin.f
-new file mode 100644
-index 0000000..186a917
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/sin.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 1.0471975512_4
-+      D_I = 1.0471975512_8
-+      !Q_I = 1.0471975512_16
-+
-+      ! Expected
-+      F_OE = 0.866025403784_4
-+      D_OE = 0.866025403784_8
-+      !Q_OE = 0.866025403784_16
-+
-+      ! Actual
-+      F_OA =  SIN (F_I)
-+      F_OC =  SIN (1.0471975512_4)
-+      D_OA = DSIN (D_I)
-+      D_OC = DSIN (1.0471975512_8)
-+      !Q_OA = QSIN (Q_I)
-+      !Q_OC = QSIN (1.0471975512_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/sind.f b/gcc/testsuite/gfortran.dg/dec/sind.f
-new file mode 100644
-index 0000000..415a817
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/sind.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 60.0_4
-+      D_I = 60.0_8
-+      !Q_I = 60.0_16
-+
-+      ! Expected
-+      F_OE = 0.866025403784_4
-+      D_OE = 0.866025403784_8
-+      !Q_OE = 0.866025403784_16
-+
-+      ! Actual
-+      F_OA =  SIND (F_I)
-+      F_OC =  SIND (60.0_4)
-+      D_OA = DSIND (D_I)
-+      D_OC = DSIND (60.0_8)
-+      !Q_OA = QSIND (Q_I)
-+      !Q_OC = QSIND (60.0_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/static_1.f b/gcc/testsuite/gfortran.dg/dec/static_1.f
 new file mode 100644
 index 0000000..85c4afa
@@ -14835,78 +14699,6 @@ index 0000000..6af87d4
 +      call assertll ("mycar.year", mycar.year,  2013)
 +
 +      end program
-diff --git a/gcc/testsuite/gfortran.dg/dec/tan.f b/gcc/testsuite/gfortran.dg/dec/tan.f
-new file mode 100644
-index 0000000..3c855e4
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/tan.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 1.0471975512_4
-+      D_I = 1.0471975512_8
-+      !Q_I = 1.0471975512_16
-+
-+      ! Expected
-+      F_OE = 1.73205080757_4
-+      D_OE = 1.73205080757_8
-+      !Q_OE = 1.73205080757_16
-+
-+      ! Actual
-+      F_OA =  TAN (F_I)
-+      F_OC =  TAN (1.0471975512_4)
-+      D_OA = DTAN (D_I)
-+      D_OC = DTAN (1.0471975512_8)
-+      !Q_OA = QTAN (Q_I)
-+      !Q_OC = QTAN (1.0471975512_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
-diff --git a/gcc/testsuite/gfortran.dg/dec/tand.f b/gcc/testsuite/gfortran.dg/dec/tand.f
-new file mode 100644
-index 0000000..d5da7b2
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/dec/tand.f
-@@ -0,0 +1,30 @@
-+      ! { dg-do run }
-+      ! { dg-options "-fdec-math" }
-+      !
-+      include 'eqt.inc'
-+      include 'checkf.inc'
-+
-+      PROGRAM MAIN
-+      include 'decl.inc'
-+
-+      ! Input
-+      F_I = 60.0_4
-+      D_I = 60.0_8
-+      !Q_I = 60.0_16
-+
-+      ! Expected
-+      F_OE = 1.73205080757_4
-+      D_OE = 1.73205080757_8
-+      !Q_OE = 1.73205080757_16
-+
-+      ! Actual
-+      F_OA =  TAND (F_I)
-+      F_OC =  TAND (60.0_4)
-+      D_OA = DTAND (D_I)
-+      D_OC = DTAND (60.0_8)
-+      !Q_OA = QTAND (Q_I)
-+      !Q_OC = QTAND (60.0_16)
-+
-+      include 'check.inc'
-+
-+      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/test.txt b/gcc/testsuite/gfortran.dg/dec/test.txt
 new file mode 100644
 index 0000000..1e3cfd5
@@ -15710,48 +15502,6 @@ index 795ac8e..e3dfdfc 100644
  gfortran-dg-runtest [lsort \
         [glob -nocomplain $srcdir/$subdir/*.\[fF\]{,90,95,03,08} ] ] $DEFAULT_FFLAGS
  
-diff --git a/gcc/testsuite/gfortran.dg/inig_flag_16.f90 b/gcc/testsuite/gfortran.dg/inig_flag_16.f90
-new file mode 100644
-index 0000000..3b234de
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/inig_flag_16.f90
-@@ -0,0 +1,36 @@
-+! { dg-do run }
-+! { dg-options "-finit-integer=12345 -fautomatic -fmax-stack-var-size=8" }
-+!
-+! Make sure that variables larger than max-stack-var-size become
-+! static and are given the correct _static_ initializer.
-+!
-+
-+function set(idx, val)
-+  implicit none
-+  integer, intent(in) :: idx, val
-+  integer set
-+  integer arr(100)
-+
-+  set = arr(idx)
-+  arr(idx) = val
-+  return
-+end function
-+
-+  integer set, val
-+
-+  val = set(1, 5)
-+  if (val .ne. 12345) then
-+    call abort()
-+  endif
-+
-+  val = set(1, 10)
-+  if (val .ne. 5) then
-+    call abort()
-+  endif
-+
-+  val = set(1, 100)
-+  if (val .ne. 10) then
-+    call abort()
-+  endif
-+
-+end
 diff --git a/gcc/testsuite/gfortran.dg/init_derived_1.f b/gcc/testsuite/gfortran.dg/init_derived_1.f
 new file mode 100644
 index 0000000..c187203
@@ -15874,11 +15624,11 @@ index 0000000..36ba36d
 +      call assertss ("t%c",  t%c,  ' ')
 +
 +      end
-diff --git a/gcc/testsuite/gfortran.dg/init_flag_15.f90 b/gcc/testsuite/gfortran.dg/init_flag_15.f90
+diff --git a/gcc/testsuite/gfortran.dg/pr71523_1.f90 b/gcc/testsuite/gfortran.dg/pr71523_1.f90
 new file mode 100644
 index 0000000..a0bfc64
 --- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/init_flag_15.f90
++++ b/gcc/testsuite/gfortran.dg/pr71523_1.f90
 @@ -0,0 +1,20 @@
 +! { dg-do compile }
 +! { dg-options "-fdump-tree-original -finit-local-zero -fautomatic -fmax-stack-var-size=8" }
@@ -15900,6 +15650,48 @@ index 0000000..a0bfc64
 +
 +! There should be no automatic initializer for arr
 +! { dg-final { scan-tree-dump-times "arr = " 0 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/pr71523_2.f90 b/gcc/testsuite/gfortran.dg/pr71523_2.f90
+new file mode 100644
+index 0000000..3b234de
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr71523_2.f90
+@@ -0,0 +1,36 @@
++! { dg-do run }
++! { dg-options "-finit-integer=12345 -fautomatic -fmax-stack-var-size=8" }
++!
++! Make sure that variables larger than max-stack-var-size become
++! static and are given the correct _static_ initializer.
++!
++
++function set(idx, val)
++  implicit none
++  integer, intent(in) :: idx, val
++  integer set
++  integer arr(100)
++
++  set = arr(idx)
++  arr(idx) = val
++  return
++end function
++
++  integer set, val
++
++  val = set(1, 5)
++  if (val .ne. 12345) then
++    call abort()
++  endif
++
++  val = set(1, 10)
++  if (val .ne. 5) then
++    call abort()
++  endif
++
++  val = set(1, 100)
++  if (val .ne. 10) then
++    call abort()
++  endif
++
++end
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index fa9c113..871d721 100644
 --- a/libgfortran/io/close.c
