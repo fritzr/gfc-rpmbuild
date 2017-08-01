@@ -1,6 +1,6 @@
 diff --git a/README.md b/README.md
 new file mode 100644
-index 0000000..cf8c736
+index 00000000000..cf8c736dd34
 --- /dev/null
 +++ b/README.md
 @@ -0,0 +1,146 @@
@@ -151,7 +151,7 @@ index 0000000..cf8c736
 +Fritz Reese
 +September 15, 2014
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 3bc3b96..a4e217f 100644
+index 3bc3b96cf10..a4e217f7d49 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
 @@ -158,20 +158,6 @@
@@ -176,7 +176,7 @@ index 3bc3b96..a4e217f 100644
  
  	* GCC 4.8.3 released.
 diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
-index c9520f6..1984771 100644
+index c9520f628ea..19847711274 100644
 --- a/gcc/fortran/check.c
 +++ b/gcc/fortran/check.c
 @@ -203,6 +203,25 @@ double_check (gfc_expr *d, int n)
@@ -233,7 +233,7 @@ index c9520f6..1984771 100644
        gfc_error ("'%s' argument of '%s' intrinsic at %L must be a "
  		 "non-derived type", gfc_current_intrinsic_arg[0]->name,
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
-index 55c072b..9841e41 100644
+index 55c072b8235..9841e41fe0f 100644
 --- a/gcc/fortran/class.c
 +++ b/gcc/fortran/class.c
 @@ -71,12 +71,11 @@ insert_component_ref (gfc_typespec *ts, gfc_ref **ref, const char * const name)
@@ -342,7 +342,7 @@ index 55c072b..9841e41 100644
      }
  
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index 1bf6175..c67c7d0 100644
+index 1bf6175f47b..8f5964a00a1 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -53,6 +53,7 @@ static gfc_typespec current_ts;
@@ -1054,8 +1054,7 @@ index 1bf6175..c67c7d0 100644
  	continue;
 +      else
 +        attr_seen = 1;
- 
--      if (gfc_current_state () == COMP_DERIVED
++
 +      if ((d == DECL_STATIC || d == DECL_AUTOMATIC)
 +          && !gfc_option.flag_dec_static)
 +      {
@@ -1067,7 +1066,8 @@ index 1bf6175..c67c7d0 100644
 +      /* Allow SAVE with STATIC, but don't complain. */
 +      if (d == DECL_STATIC && seen[DECL_SAVE])
 +        continue;
-+
+ 
+-      if (gfc_current_state () == COMP_DERIVED
 +      if (gfc_comp_is_derived (gfc_current_state ())
  	  && d != DECL_DIMENSION && d != DECL_CODIMENSION
  	  && d != DECL_POINTER   && d != DECL_PRIVATE
@@ -1229,7 +1229,34 @@ index 1bf6175..c67c7d0 100644
      case COMP_DERIVED:
      case COMP_DERIVED_CONTAINS:
        *st = ST_END_TYPE;
-@@ -7033,6 +7379,110 @@ gfc_match_parameter (void)
+@@ -7007,10 +7353,16 @@ cleanup:
+ match
+ gfc_match_parameter (void)
+ {
++  const char *term = " )%t";
+   match m;
+ 
+   if (gfc_match_char ('(') == MATCH_NO)
+-    return MATCH_NO;
++    {
++      /* With legacy PARAMETER statements, don't expect a terminating ')'.  */
++      if (!gfc_notify_std (GFC_STD_LEGACY, "PARAMETER without '()' at %C"))
++        return MATCH_NO;
++      term = " %t";
++    }
+ 
+   for (;;)
+     {
+@@ -7018,7 +7370,7 @@ gfc_match_parameter (void)
+       if (m != MATCH_YES)
+ 	break;
+ 
+-      if (gfc_match (" )%t") == MATCH_YES)
++      if (gfc_match (term) == MATCH_YES)
+ 	break;
+ 
+       if (gfc_match_char (',') != MATCH_YES)
+@@ -7033,6 +7385,110 @@ gfc_match_parameter (void)
  }
  
  
@@ -1340,7 +1367,7 @@ index 1bf6175..c67c7d0 100644
  /* Save statements have a special syntax.  */
  
  match
-@@ -7515,6 +7965,308 @@ gfc_get_type_attr_spec (symbol_attribute *attr, char *name)
+@@ -7515,6 +7971,308 @@ gfc_get_type_attr_spec (symbol_attribute *attr, char *name)
    return MATCH_YES;
  }
  
@@ -1649,7 +1676,7 @@ index 1bf6175..c67c7d0 100644
  
  /* Match the beginning of a derived type declaration.  If a type name
     was the result of a function, then it is possible to have a symbol
-@@ -7531,9 +8283,10 @@ gfc_match_derived_decl (void)
+@@ -7531,9 +8289,10 @@ gfc_match_derived_decl (void)
    match m;
    match is_type_attr_spec = MATCH_NO;
    bool seen_attr = false;
@@ -1661,7 +1688,7 @@ index 1bf6175..c67c7d0 100644
      return MATCH_NO;
  
    name[0] = '\0';
-@@ -7565,7 +8318,11 @@ gfc_match_derived_decl (void)
+@@ -7565,7 +8324,11 @@ gfc_match_derived_decl (void)
        return MATCH_ERROR;
      }
  
@@ -1674,7 +1701,7 @@ index 1bf6175..c67c7d0 100644
    if (m != MATCH_YES)
      return m;
  
-@@ -7619,6 +8376,7 @@ gfc_match_derived_decl (void)
+@@ -7619,6 +8382,7 @@ gfc_match_derived_decl (void)
        intr->next = head;
        gensym->generic = intr;
        gensym->attr.if_source = IFSRC_DECL;
@@ -1682,7 +1709,7 @@ index 1bf6175..c67c7d0 100644
      }
  
    /* The symbol may already have the derived attribute without the
-@@ -7663,7 +8421,7 @@ gfc_match_derived_decl (void)
+@@ -7663,7 +8427,7 @@ gfc_match_derived_decl (void)
  
        p->ts.type = BT_DERIVED;
        p->ts.u.derived = extended;
@@ -1691,7 +1718,7 @@ index 1bf6175..c67c7d0 100644
  
        /* Set extension level.  */
        if (extended->attr.extension == 255)
-@@ -7690,6 +8448,13 @@ gfc_match_derived_decl (void)
+@@ -7690,6 +8454,13 @@ gfc_match_derived_decl (void)
    /* Take over the ABSTRACT attribute.  */
    sym->attr.abstract = attr.abstract;
  
@@ -1706,7 +1733,7 @@ index 1bf6175..c67c7d0 100644
  
    return MATCH_YES;
 diff --git a/gcc/fortran/dump-parse-tree.c b/gcc/fortran/dump-parse-tree.c
-index 501a4eb..06d9e6c 100644
+index 501a4ebb566..06d9e6cf475 100644
 --- a/gcc/fortran/dump-parse-tree.c
 +++ b/gcc/fortran/dump-parse-tree.c
 @@ -47,6 +47,7 @@ static FILE *dumpfile;
@@ -1809,7 +1836,7 @@ index 501a4eb..06d9e6c 100644
  }
  
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 0e89a4c..5b874af 100644
+index 0e89a4ce98a..5b874afb155 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
 @@ -333,9 +333,9 @@ gfc_copy_expr (gfc_expr *p)
@@ -2218,7 +2245,7 @@ index 0e89a4c..5b874af 100644
  	    gfc_convert_type_warn (ctor->expr, &comp->ts, 2, false);
  	}
 diff --git a/gcc/fortran/f95-lang.c b/gcc/fortran/f95-lang.c
-index 60d790b..0803b65 100644
+index 60d790b0858..0803b65f923 100644
 --- a/gcc/fortran/f95-lang.c
 +++ b/gcc/fortran/f95-lang.c
 @@ -570,6 +570,7 @@ gfc_define_builtin (const char *name, tree type, enum built_in_function code,
@@ -2238,7 +2265,7 @@ index 60d790b..0803b65 100644
  #undef DEFINE_MATH_BUILTIN
  
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index 7bbdac8..8c62d83 100644
+index 7bbdac81b9e..8c62d83a969 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
 @@ -1852,6 +1852,8 @@ gfc_code_walker (gfc_code **c, walk_code_fn_t codefn, walk_expr_fn_t exprfn,
@@ -2251,7 +2278,7 @@ index 7bbdac8..8c62d83 100644
  
  	    case EXEC_CLOSE:
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index 2428b51..3fd6bcf 100644
+index 2428b519b20..3fd6bcf3770 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -49,7 +49,18 @@ along with GCC; see the file COPYING3.  If not see
@@ -2459,7 +2486,7 @@ index 2428b51..3fd6bcf 100644
  /* primary.c */
  symbol_attribute gfc_variable_attr (gfc_expr *, gfc_typespec *);
 diff --git a/gcc/fortran/gfortran.texi b/gcc/fortran/gfortran.texi
-index 4f9008d..f98b3e6 100644
+index 4f9008d3d26..71161a9b67f 100644
 --- a/gcc/fortran/gfortran.texi
 +++ b/gcc/fortran/gfortran.texi
 @@ -473,9 +473,9 @@ The GNU Fortran compiler is able to compile nearly all
@@ -2540,7 +2567,7 @@ index 4f9008d..f98b3e6 100644
  @node Hollerith constants support
  @subsection Hollerith constants support
  @cindex Hollerith constants
-@@ -1959,55 +1992,55 @@ C
+@@ -1959,55 +1992,56 @@ C
        end
  @end smallexample
  
@@ -2607,6 +2634,7 @@ index 4f9008d..f98b3e6 100644
 +* Extended math intrinsics::
 +* AUTOMATIC and STATIC attributes::
 +* Form feed as whitespace::
++* Legacy PARAMETER statements::
  @end menu
  
 -
@@ -2628,7 +2656,7 @@ index 4f9008d..f98b3e6 100644
  
  In many cases, record structures can easily be converted to derived types.
  To convert, replace @code{STRUCTURE /}@var{structure-name}@code{/}
-@@ -2016,6 +2049,10 @@ by @code{TYPE} @var{type-name}.  Additionally, replace
+@@ -2016,6 +2050,10 @@ by @code{TYPE} @var{type-name}.  Additionally, replace
  @code{TYPE(}@var{type-name}@code{)}. Finally, in the component access,
  replace the period (@code{.}) by the percent sign (@code{%}).
  
@@ -2639,7 +2667,7 @@ index 4f9008d..f98b3e6 100644
  Here is an example of code using the non portable record structure syntax:
  
  @example
-@@ -2045,43 +2082,486 @@ print *, store_catalog(12)
+@@ -2045,43 +2083,502 @@ print *, store_catalog(12)
  @end example
  
  @noindent
@@ -2895,10 +2923,18 @@ index 4f9008d..f98b3e6 100644
 +open (unit=fd, file=fname, readonly)
 + ...
 +close (unit=fd, status='delete') ! will cause runtime error
-+@end example
-+
+ @end example
+ 
 +@item @code{SHARED}, @code{NOSHARED}, @code{SHARE=DENYNONE|DENYRW}
-+
+ 
+-@c @node UNION and MAP
+-@c @subsection @code{UNION} and @code{MAP}
+-@c @cindex @code{UNION}
+-@c @cindex @code{MAP}
+-@c
+-@c For help writing this one, see
+-@c http://www.eng.umd.edu/~nsw/ench250/fortran1.htm#UNION and
+-@c http://www.tacc.utexas.edu/services/userguides/pgi/pgiws_ug/pgi32u06.htm
 +When this specifier is given, runtime file locking occurs based on the option
 +given. The locking is performed by @code{fcntl}; see your system's
 +documentation for details on the locking performed.
@@ -3087,7 +3123,7 @@ index 4f9008d..f98b3e6 100644
 +  save
 +  ...
 +endsubroutine
- @end example
++@end example
 +@example
 +subroutine f
 +  integer a, b, c, x, y, z
@@ -3116,11 +3152,27 @@ index 4f9008d..f98b3e6 100644
 +supports the interpretation of form feed characters in source as whitespace
 +with @option{-ffeed}.
 +
++@node Legacy PARAMETER statements
++@subsubsection Legacy PARAMETER statements
++@cindex PARAMETER
++
++For compatibility, GNU Fortran supports legacy PARAMETER statements without
++parentheses with @option{-std=legacy}.  A warning is emitted if used with
++@option{-std=gnu}, and an error is acknowledged with a real Fortran standard
++flag (@option{-std=f95}, etc...).  These statements take the following form:
++
++@smallexample
++implicit real (E)
++paraneter e = 2.718282
++real c
++parameter c = 3.0e8
++@end smallexample
++
 +
 +@node Extensions not implemented in GNU Fortran
 +@section Extensions not implemented in GNU Fortran
 +@cindex extensions, not implemented
- 
++
 +The long history of the Fortran language, its wide use and broad
 +userbase, the large number of different compiler vendors and the lack of
 +some features crucial to users in the first standards have lead to the
@@ -3129,15 +3181,7 @@ index 4f9008d..f98b3e6 100644
 +Fortran compiler, not all existing extensions are supported.  This section
 +aims at listing these extensions and offering advice on how best make
 +code that uses them running with the GNU Fortran compiler.
- 
--@c @node UNION and MAP
--@c @subsection @code{UNION} and @code{MAP}
--@c @cindex @code{UNION}
--@c @cindex @code{MAP}
--@c
--@c For help writing this one, see
--@c http://www.eng.umd.edu/~nsw/ench250/fortran1.htm#UNION and
--@c http://www.tacc.utexas.edu/services/userguides/pgi/pgiws_ug/pgi32u06.htm
++
 +@c More can be found here:
 +@c   -- http://gcc.gnu.org/onlinedocs/gcc-3.4.6/g77/Missing-Features.html
 +@c   -- the list of Fortran and libgfortran bugs closed as WONTFIX:
@@ -3156,26 +3200,53 @@ index 4f9008d..f98b3e6 100644
  
  @node ENCODE and DECODE statements
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index 2d73942..639d34e 100644
+index 2d739426e22..d4057b4b360 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
-@@ -383,19 +383,139 @@ gfc_match_end_interface (void)
+@@ -383,13 +383,150 @@ gfc_match_end_interface (void)
  }
  
  
++/* Return whether the component was defined anonymously.  */
++
++static bool
++is_anonymous_component (gfc_component *cmp)
++{
++  /* Only UNION and MAP components are anonymous.  In the case of a MAP,
++     the derived type symbol is FL_STRUCT and the component name looks like mM*.
++     This is the only case in which the second character of a component name is
++     uppercase.  */
++  return cmp->ts.type == BT_UNION
++    || (cmp->ts.type == BT_DERIVED
++        && cmp->ts.u.derived->attr.flavor == FL_STRUCT
++        && cmp->name[0] && cmp->name[1] && ISUPPER (cmp->name[1]));
++}
++
++
++/* Return whether the derived type was defined anonymously.  */
++
++static bool
++is_anonymous_dt (gfc_symbol *derived)
++{
++  /* UNION and MAP types are always anonymous. Otherwise, only nested STRUCTURE
++     types can be anonymous.  For anonymous MAP/STRUCTURE, we have FL_STRUCT
++     and the type name looks like XX*.  This is the only case in which the
++     second character of a type name is uppercase.  */
++  return derived->attr.flavor == FL_UNION
++    || (derived->attr.flavor == FL_STRUCT
++        && derived->name[0] && derived->name[1] && ISUPPER (derived->name[1]));
++}
++
++
 +/* Compare components according to 4.4.2 of the Fortran standard.  */
 +
 +static int
 +compare_components (gfc_component *cmp1, gfc_component *cmp2,
 +    gfc_symbol *derived1, gfc_symbol *derived2)
 +{
-+  /* UNIONs, MAPs, and anonymous STRUCTURE components all have internal
-+     names of the form uU*, mM*, sS*, etc... Ignore differences here;
-+     we must do a deeper comparison. */
-+  if (strcmp (cmp1->name, cmp2->name) != 0
-+      && !(   cmp1->name[1] == (char) TOUPPER (cmp1->name[0])
-+           && cmp2->name[1] == (char) TOUPPER (cmp2->name[0])
-+           && cmp1->name[0] == cmp2->name[0]))
++  /* Compare names, but not for anonymous components such as UNION or MAP.  */
++  if (!is_anonymous_component (cmp1) && !is_anonymous_component (cmp1)
++      && strcmp (cmp1->name, cmp2->name) != 0)
 +    return 0;
 +
 +  if (cmp1->attr.access != cmp2->attr.access)
@@ -3281,30 +3352,16 @@ index 2d73942..639d34e 100644
  {
 -  gfc_component *dt1, *dt2;
 +  gfc_component *cmp1, *cmp2;
-+  bool anonymous = false;
  
    if (derived1 == derived2)
      return 1;
- 
-   gcc_assert (derived1 && derived2);
- 
-+  /* MAP and anonymous STRUCTURE types have internal names of the form
-+     mM* and sS* (we can get away with this because source names are converted
-+     to lowercase). Compare anonymous type names specially because each
-+     gets a unique name when it is declared. */
-+  anonymous = (derived1->name[0] == derived2->name[0]
-+      && derived1->name[1] && derived2->name[1] && derived2->name[2]
-+      && derived1->name[1] == (char) TOUPPER (derived1->name[0])
-+      && derived2->name[2] == (char) TOUPPER (derived2->name[0]));
-+
-   /* Special case for comparing derived types across namespaces.  If the
-      true names and module names are the same and the module name is
-      nonnull, then they are equal.  */
-@@ -404,12 +524,12 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -404,12 +541,14 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && strcmp (derived1->module, derived2->module) == 0)
      return 1;
  
-+  if (strcmp (derived1->name, derived2->name) != 0 && !anonymous)
++  /* Compare names, but not for anonymous types such as UNION or MAP.  */
++  if (!is_anonymous_dt (derived1) && !is_anonymous_dt (derived2)
++      && strcmp (derived1->name, derived2->name) != 0)
 +    return 0;
 +
    /* Compare type via the rules of the standard.  Both types must have
@@ -3316,7 +3373,7 @@ index 2d73942..639d34e 100644
    if (derived1->component_access == ACCESS_PRIVATE
        || derived2->component_access == ACCESS_PRIVATE)
      return 0;
-@@ -418,53 +538,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
+@@ -418,53 +557,42 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
        && !(derived1->attr.is_bind_c && derived2->attr.is_bind_c))
      return 0;
  
@@ -3390,7 +3447,7 @@ index 2d73942..639d34e 100644
  	return 0;
      }
  
-@@ -494,10 +603,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -494,10 +622,14 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
        && (ts1->u.derived->attr.sequence || ts1->u.derived->attr.is_bind_c))
      return 1;
  
@@ -3407,7 +3464,7 @@ index 2d73942..639d34e 100644
    if (ts1->type != BT_DERIVED && ts1->type != BT_CLASS)
      return (ts1->kind == ts2->kind);
  
-@@ -505,7 +618,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
+@@ -505,7 +637,7 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
    if (gfc_type_compatible (ts1, ts2))
      return 1;
  
@@ -3416,7 +3473,7 @@ index 2d73942..639d34e 100644
  }
  
  
-@@ -1467,7 +1580,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1467,7 +1599,7 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  	 functions or subroutines.  */
        if (((!p->sym->attr.function && !p->sym->attr.subroutine)
  	   || !p->sym->attr.if_source)
@@ -3425,7 +3482,7 @@ index 2d73942..639d34e 100644
  	{
  	  if (p->sym->attr.external)
  	    gfc_error ("Procedure '%s' in %s at %L has no explicit interface",
-@@ -1481,17 +1594,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
+@@ -1481,17 +1613,21 @@ check_interface0 (gfc_interface *p, const char *interface_name)
  
        /* Verify that procedures are either all SUBROUTINEs or all FUNCTIONs.  */
        if ((psave->sym->attr.function && !p->sym->attr.function
@@ -3450,7 +3507,7 @@ index 2d73942..639d34e 100644
  	  return 1;
  	}
  
-@@ -1548,8 +1665,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
+@@ -1548,8 +1684,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
  	if (p->sym->name == q->sym->name && p->sym->module == q->sym->module)
  	  continue;
  
@@ -3461,7 +3518,7 @@ index 2d73942..639d34e 100644
  	    && gfc_compare_interfaces (p->sym, q->sym, q->sym->name,
  				       generic_flag, 0, NULL, 0, NULL, NULL))
  	  {
-@@ -2463,7 +2580,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2463,7 +2599,8 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	  return 0;
  	}
  
@@ -3471,7 +3528,7 @@ index 2d73942..639d34e 100644
  	goto match;
  
        if (f->sym == NULL)
-@@ -2514,7 +2632,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+@@ -2514,7 +2651,7 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
  	}
  
        if (!compare_parameter (f->sym, a->expr, ranks_must_agree,
@@ -3480,7 +3537,7 @@ index 2d73942..639d34e 100644
  	return 0;
  
        /* TS 29113, 6.3p2.  */
-@@ -3328,7 +3446,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
+@@ -3328,7 +3465,7 @@ gfc_search_interface (gfc_interface *intr, int sub_flag,
  
    for (; intr; intr = intr->next)
      {
@@ -3490,7 +3547,7 @@ index 2d73942..639d34e 100644
        if (sub_flag && intr->sym->attr.function)
  	continue;
 diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
-index 7d78419..8cf89c7 100644
+index 7d78419a76d..8cf89c7dfee 100644
 --- a/gcc/fortran/intrinsic.c
 +++ b/gcc/fortran/intrinsic.c
 @@ -1108,6 +1108,25 @@ add_functions (void)
@@ -4097,7 +4154,7 @@ index 7d78419..8cf89c7 100644
        gfc_warning_now ("Extension: Conversion from %s to %s at %L",
  		       gfc_typename (&from_ts), gfc_typename (ts),
 diff --git a/gcc/fortran/intrinsic.h b/gcc/fortran/intrinsic.h
-index 5d50285..24e8715 100644
+index 5d502855269..24e87150a63 100644
 --- a/gcc/fortran/intrinsic.h
 +++ b/gcc/fortran/intrinsic.h
 @@ -67,6 +67,7 @@ gfc_try gfc_check_float (gfc_expr *);
@@ -4166,7 +4223,7 @@ index 5d50285..24e8715 100644
  void gfc_resolve_ttynam (gfc_expr *, gfc_expr *);
  void gfc_resolve_ubound (gfc_expr *, gfc_expr *, gfc_expr *, gfc_expr *);
 diff --git a/gcc/fortran/intrinsic.texi b/gcc/fortran/intrinsic.texi
-index a3b80aa..fa2080e 100644
+index a3b80aa779c..fa2080ef0d2 100644
 --- a/gcc/fortran/intrinsic.texi
 +++ b/gcc/fortran/intrinsic.texi
 @@ -23,6 +23,9 @@ Some basic guidelines for editing this document:
@@ -5079,7 +5136,7 @@ index a3b80aa..fa2080e 100644
  
  
 diff --git a/gcc/fortran/invoke.texi b/gcc/fortran/invoke.texi
-index b0b43d8..3d29466 100644
+index b0b43d8478b..3d29466111b 100644
 --- a/gcc/fortran/invoke.texi
 +++ b/gcc/fortran/invoke.texi
 @@ -115,13 +115,17 @@ by type.  Explanations are in the following sections.
@@ -5284,7 +5341,7 @@ index b0b43d8..3d29466 100644
  Note that the @option{-finit-real=nan} option initializes @code{REAL}
  and @code{COMPLEX} variables with a quiet NaN. For a signalling NaN
 diff --git a/gcc/fortran/io.c b/gcc/fortran/io.c
-index 1d46474..3f87385 100644
+index 1d464742f5b..3f873857c4d 100644
 --- a/gcc/fortran/io.c
 +++ b/gcc/fortran/io.c
 @@ -38,6 +38,12 @@ typedef struct
@@ -5493,7 +5550,7 @@ index 1d46474..3f87385 100644
  
        if (!compare_to_allowed_values ("STATUS", status, NULL, NULL,
 diff --git a/gcc/fortran/ioparm.def b/gcc/fortran/ioparm.def
-index 2499c90..42f5649 100644
+index 2499c90c9a8..42f5649240e 100644
 --- a/gcc/fortran/ioparm.def
 +++ b/gcc/fortran/ioparm.def
 @@ -50,6 +50,9 @@ IOPARM (open,    round,		1 << 20, char2)
@@ -5507,7 +5564,7 @@ index 2499c90..42f5649 100644
  IOPARM (close,   status,	1 << 7,  char1)
  IOPARM (filepos, common,	0,	 common)
 diff --git a/gcc/fortran/iresolve.c b/gcc/fortran/iresolve.c
-index 5b2f8c7..15b3c49 100644
+index 5b2f8c7b44e..15b3c496bee 100644
 --- a/gcc/fortran/iresolve.c
 +++ b/gcc/fortran/iresolve.c
 @@ -652,6 +652,87 @@ gfc_resolve_cosh (gfc_expr *f, gfc_expr *x)
@@ -5738,7 +5795,7 @@ index 5b2f8c7..15b3c49 100644
  gfc_resolve_image_index (gfc_expr *f, gfc_expr *array ATTRIBUTE_UNUSED,
  			 gfc_expr *sub ATTRIBUTE_UNUSED)
 diff --git a/gcc/fortran/lang.opt b/gcc/fortran/lang.opt
-index fbe8a1b..f7f66ed 100644
+index fbe8a1b2fb9..f7f66edff41 100644
 --- a/gcc/fortran/lang.opt
 +++ b/gcc/fortran/lang.opt
 @@ -205,6 +205,10 @@ Wampersand
@@ -5863,7 +5920,7 @@ index fbe8a1b..f7f66ed 100644
  Fortran
  Set default accessibility of module entities to PRIVATE.
 diff --git a/gcc/fortran/libgfortran.h b/gcc/fortran/libgfortran.h
-index 30b3b7b..ef70478 100644
+index 30b3b7bcee7..ef7047884f3 100644
 --- a/gcc/fortran/libgfortran.h
 +++ b/gcc/fortran/libgfortran.h
 @@ -128,7 +128,7 @@ libgfortran_stat_codes;
@@ -5877,7 +5934,7 @@ index 30b3b7b..ef70478 100644
  }
  bt;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
-index 9827b6c..185e9c9 100644
+index 9827b6c4860..185e9c94b8c 100644
 --- a/gcc/fortran/match.c
 +++ b/gcc/fortran/match.c
 @@ -111,6 +111,126 @@ gfc_op2string (gfc_intrinsic_op op)
@@ -6277,7 +6334,7 @@ index 9827b6c..185e9c9 100644
  
    if (select_type_stack->selector->ts.type == BT_CLASS
 diff --git a/gcc/fortran/match.h b/gcc/fortran/match.h
-index 48aa405..a865b91 100644
+index 48aa4056e17..a865b91d718 100644
 --- a/gcc/fortran/match.h
 +++ b/gcc/fortran/match.h
 @@ -45,6 +45,10 @@ extern gfc_access gfc_typebound_default_access;
@@ -6330,7 +6387,7 @@ index 48aa405..a865b91 100644
  /* Fortran 2003 c interop.
     TODO: some of these should be moved to another file rather than decl.c */
 diff --git a/gcc/fortran/mathbuiltins.def b/gcc/fortran/mathbuiltins.def
-index 8236d5c..ea4403a 100644
+index 8236d5c1a1d..ea4403a1d3d 100644
 --- a/gcc/fortran/mathbuiltins.def
 +++ b/gcc/fortran/mathbuiltins.def
 @@ -70,3 +70,10 @@ OTHER_BUILTIN (POW,       "pow",       1,       true)
@@ -6345,7 +6402,7 @@ index 8236d5c..ea4403a 100644
 +   ARGTYPE The type of the arguments, to match that of OLDID */
 +MATH_ALIAS_BUILTIN (COTAN, TAN, "tan", 0)
 diff --git a/gcc/fortran/misc.c b/gcc/fortran/misc.c
-index cce599b..8e097e1 100644
+index cce599b3cbc..8e097e14f2c 100644
 --- a/gcc/fortran/misc.c
 +++ b/gcc/fortran/misc.c
 @@ -92,6 +92,9 @@ gfc_basic_typename (bt type)
@@ -6369,7 +6426,7 @@ index cce599b..8e097e1 100644
        sprintf (buffer, "TYPE(%s)", ts->u.derived->name);
        break;
 diff --git a/gcc/fortran/module.c b/gcc/fortran/module.c
-index 4fd0d88..59d3aa5 100644
+index 4fd0d883c84..59d3aa5d661 100644
 --- a/gcc/fortran/module.c
 +++ b/gcc/fortran/module.c
 @@ -406,8 +406,8 @@ resolve_fixups (fixup_t *f, void *gp)
@@ -6535,7 +6592,7 @@ index 4fd0d88..59d3aa5 100644
    dt_sym = tmp_symtree->n.sym;
    dt_sym->name = gfc_get_string (sym->name);
 diff --git a/gcc/fortran/openmp.c b/gcc/fortran/openmp.c
-index 05de49b..3724e6e 100644
+index 05de49bd79b..3724e6e2aef 100644
 --- a/gcc/fortran/openmp.c
 +++ b/gcc/fortran/openmp.c
 @@ -815,7 +815,9 @@ resolve_omp_clauses (gfc_code *code)
@@ -6550,10 +6607,10 @@ index 05de49b..3724e6e 100644
  		   &expr->where);
      }
 diff --git a/gcc/fortran/options.c b/gcc/fortran/options.c
-index fba1a3f..abb8cfb 100644
+index fba1a3f3a88..2def9e123cb 100644
 --- a/gcc/fortran/options.c
 +++ b/gcc/fortran/options.c
-@@ -51,6 +51,41 @@ set_default_std_flags (void)
+@@ -51,6 +51,51 @@ set_default_std_flags (void)
    gfc_option.warn_std = GFC_STD_F95_DEL | GFC_STD_LEGACY;
  }
  
@@ -6574,28 +6631,38 @@ index fba1a3f..abb8cfb 100644
 +static void
 +set_dec_flags (int value)
 +{
-+    if (value) gfc_option.flag_dollar_ok = 1;
-+    if (value) gfc_option.flag_d_lines = 0; /* -fd-lines-as-comments */
-+    if (value) gfc_option.flag_loc_rval = 1;
-+    if (value) gfc_option.warn_format_tab = 0;
-+    if (value) set_missing_include_dirs (0);
-+    gfc_option.flag_dec_extended_int = value;
-+    gfc_option.flag_dec_structure  = value;
-+    gfc_option.flag_dec_member_dot = value;
-+    gfc_option.flag_dec_math = value;
-+    gfc_option.flag_dec_logical_xor = value;
-+    gfc_option.flag_lazy_logicals = value;
-+    gfc_option.flag_dec_bitwise_ops = value;
-+    gfc_option.flag_dec_io = value;
-+    gfc_option.flag_dec_intrinsic_ints = value;
-+    gfc_option.flag_dec_static = value;
-+    gfc_option.flag_feed = value;
-+    gfc_option.flag_type_print = value;
++  if (value)
++    {
++      /* Allow legacy code without warnings.  */
++      gfc_option.allow_std |= GFC_STD_F95_OBS | GFC_STD_F95_DEL
++        | GFC_STD_GNU | GFC_STD_LEGACY;
++      gfc_option.warn_std &= ~(GFC_STD_LEGACY | GFC_STD_F95_DEL);
++
++      gfc_option.flag_dollar_ok = 1;
++      gfc_option.flag_d_lines = 0; /* -fd-lines-as-comments */
++      gfc_option.flag_loc_rval = 1;
++      gfc_option.warn_format_tab = 0;
++      set_missing_include_dirs (0);
++    }
++
++  /* Set other DEC compatibility extensions.  */
++  gfc_option.flag_dec_extended_int = value;
++  gfc_option.flag_dec_structure  = value;
++  gfc_option.flag_dec_member_dot = value;
++  gfc_option.flag_dec_math = value;
++  gfc_option.flag_dec_logical_xor = value;
++  gfc_option.flag_lazy_logicals = value;
++  gfc_option.flag_dec_bitwise_ops = value;
++  gfc_option.flag_dec_io = value;
++  gfc_option.flag_dec_intrinsic_ints = value;
++  gfc_option.flag_dec_static = value;
++  gfc_option.flag_feed = value;
++  gfc_option.flag_type_print = value;
 +}
  
  /* Return language mask for Fortran options.  */
  
-@@ -113,6 +148,9 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -113,6 +158,9 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.warn_realloc_lhs_all = 0;
    gfc_option.warn_compare_reals = 0;
    gfc_option.warn_target_lifetime = 0;
@@ -6605,7 +6672,7 @@ index fba1a3f..abb8cfb 100644
    gfc_option.max_errors = 25;
  
    gfc_option.flag_all_intrinsics = 0;
-@@ -155,6 +193,7 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -155,6 +203,7 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.flag_init_logical = GFC_INIT_LOGICAL_OFF;
    gfc_option.flag_init_character = GFC_INIT_CHARACTER_OFF;
    gfc_option.flag_init_character_value = (char)0;
@@ -6613,7 +6680,7 @@ index fba1a3f..abb8cfb 100644
    gfc_option.flag_align_commons = 1;
    gfc_option.flag_protect_parens = -1;
    gfc_option.flag_realloc_lhs = -1;
-@@ -165,10 +204,15 @@ gfc_init_options (unsigned int decoded_options_count,
+@@ -165,10 +214,15 @@ gfc_init_options (unsigned int decoded_options_count,
    gfc_option.rtcheck = 0;
    gfc_option.coarray = GFC_FCOARRAY_NONE;
  
@@ -6629,7 +6696,7 @@ index fba1a3f..abb8cfb 100644
  }
  
  
-@@ -257,6 +301,9 @@ gfc_post_options (const char **pfilename)
+@@ -257,6 +311,9 @@ gfc_post_options (const char **pfilename)
    char *source_path;
    int i;
  
@@ -6639,7 +6706,7 @@ index fba1a3f..abb8cfb 100644
    /* Excess precision other than "fast" requires front-end
       support.  */
    if (flag_excess_precision_cmdline == EXCESS_PRECISION_STANDARD
-@@ -726,6 +773,18 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -726,6 +783,18 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.warn_unused_dummy_argument = value;
        break;
  
@@ -6658,7 +6725,7 @@ index fba1a3f..abb8cfb 100644
      case OPT_fall_intrinsics:
        gfc_option.flag_all_intrinsics = 1;
        break;
-@@ -942,6 +1001,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -942,6 +1011,10 @@ gfc_handle_option (size_t scode, const char *arg, int value,
        gfc_option.flag_init_character_value = (char)0;
        break;
  
@@ -6669,7 +6736,7 @@ index fba1a3f..abb8cfb 100644
      case OPT_finit_logical_:
        if (!strcasecmp (arg, "false"))
  	gfc_option.flag_init_logical = GFC_INIT_LOGICAL_FALSE;
-@@ -1119,6 +1182,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
+@@ -1119,6 +1192,64 @@ gfc_handle_option (size_t scode, const char *arg, int value,
      case OPT_fcoarray_:
        gfc_handle_coarray_option (arg);
        break;
@@ -6735,7 +6802,7 @@ index fba1a3f..abb8cfb 100644
  
    Fortran_handle_option_auto (&global_options, &global_options_set, 
 diff --git a/gcc/fortran/parse.c b/gcc/fortran/parse.c
-index f748fe3..83634ed 100644
+index f748fe3262e..4899743cdd1 100644
 --- a/gcc/fortran/parse.c
 +++ b/gcc/fortran/parse.c
 @@ -162,6 +162,7 @@ decode_specification_statement (void)
@@ -6755,7 +6822,18 @@ index f748fe3..83634ed 100644
        break;
  
      case 't':
-@@ -359,6 +362,12 @@ decode_statement (void)
+@@ -275,6 +278,10 @@ decode_statement (void)
+ 
+   gfc_matching_function = false;
+ 
++  /* Legacy parameter statements are ambiguous with assignments so try
++   * parameter first.  */
++  match ("parameter", gfc_match_parameter, ST_PARAMETER);
++
+   if (gfc_match_eos () == MATCH_YES)
+     return ST_NONE;
+ 
+@@ -359,6 +366,12 @@ decode_statement (void)
    gfc_undo_symbols ();
    gfc_current_locus = old_locus;
  
@@ -6768,7 +6846,7 @@ index f748fe3..83634ed 100644
    match (NULL, gfc_match_do, ST_DO);
    match (NULL, gfc_match_block, ST_BLOCK);
    match (NULL, gfc_match_associate, ST_ASSOCIATE);
-@@ -384,6 +393,7 @@ decode_statement (void)
+@@ -384,6 +397,7 @@ decode_statement (void)
        match ("allocatable", gfc_match_allocatable, ST_ATTR_DECL);
        match ("assign", gfc_match_assign, ST_LABEL_ASSIGNMENT);
        match ("asynchronous", gfc_match_asynchronous, ST_ATTR_DECL);
@@ -6776,7 +6854,7 @@ index f748fe3..83634ed 100644
        break;
  
      case 'b':
-@@ -454,6 +464,7 @@ decode_statement (void)
+@@ -454,6 +468,7 @@ decode_statement (void)
        break;
  
      case 'm':
@@ -6784,7 +6862,15 @@ index f748fe3..83634ed 100644
        match ("module% procedure", gfc_match_modproc, ST_MODULE_PROC);
        match ("module", gfc_match_module, ST_MODULE);
        break;
-@@ -489,8 +500,11 @@ decode_statement (void)
+@@ -470,7 +485,6 @@ decode_statement (void)
+ 
+     case 'p':
+       match ("print", gfc_match_print, ST_WRITE);
+-      match ("parameter", gfc_match_parameter, ST_PARAMETER);
+       match ("pause", gfc_match_pause, ST_PAUSE);
+       match ("pointer", gfc_match_pointer, ST_ATTR_DECL);
+       if (gfc_match_private (&st) == MATCH_YES)
+@@ -489,8 +503,11 @@ decode_statement (void)
        break;
  
      case 's':
@@ -6796,7 +6882,7 @@ index f748fe3..83634ed 100644
        match ("save", gfc_match_save, ST_ATTR_DECL);
        match ("sync all", gfc_match_sync_all, ST_SYNC_ALL);
        match ("sync images", gfc_match_sync_images, ST_SYNC_IMAGES);
-@@ -504,6 +518,7 @@ decode_statement (void)
+@@ -504,6 +521,7 @@ decode_statement (void)
        break;
  
      case 'u':
@@ -6804,7 +6890,7 @@ index f748fe3..83634ed 100644
        match ("unlock", gfc_match_unlock, ST_UNLOCK);
        break;
  
-@@ -812,6 +827,9 @@ next_fixed (void)
+@@ -812,6 +830,9 @@ next_fixed (void)
  	{
  	case ' ':
  	  break;
@@ -6814,7 +6900,7 @@ index f748fe3..83634ed 100644
  
  	case '0':
  	case '1':
-@@ -1220,6 +1238,68 @@ gfc_enclosing_unit (gfc_compile_state * result)
+@@ -1220,6 +1241,68 @@ gfc_enclosing_unit (gfc_compile_state * result)
    return NULL;
  }
  
@@ -6883,7 +6969,7 @@ index f748fe3..83634ed 100644
  
  /* Translate a statement enum to a string.  */
  
-@@ -1284,6 +1364,15 @@ gfc_ascii_statement (gfc_statement st)
+@@ -1284,6 +1367,15 @@ gfc_ascii_statement (gfc_statement st)
      case ST_DEALLOCATE:
        p = "DEALLOCATE";
        break;
@@ -6899,7 +6985,7 @@ index f748fe3..83634ed 100644
      case ST_DERIVED_DECL:
        p = _("derived type declaration");
        break;
-@@ -1344,6 +1433,15 @@ gfc_ascii_statement (gfc_statement st)
+@@ -1344,6 +1436,15 @@ gfc_ascii_statement (gfc_statement st)
      case ST_END_WHERE:
        p = "END WHERE";
        break;
@@ -6915,7 +7001,7 @@ index f748fe3..83634ed 100644
      case ST_END_TYPE:
        p = "END TYPE";
        break;
-@@ -1880,6 +1978,7 @@ verify_st_order (st_state *p, gfc_statement st, bool silent)
+@@ -1880,6 +1981,7 @@ verify_st_order (st_state *p, gfc_statement st, bool silent)
  
      case ST_PUBLIC:
      case ST_PRIVATE:
@@ -6923,7 +7009,7 @@ index f748fe3..83634ed 100644
      case ST_DERIVED_DECL:
      case_decl:
        if (p->state >= ORDER_EXEC)
-@@ -2073,6 +2172,349 @@ error:
+@@ -2073,6 +2175,349 @@ error:
    return error_flag;
  }
  
@@ -7273,7 +7359,7 @@ index f748fe3..83634ed 100644
  
  /* Parse a derived type.  */
  
-@@ -2190,119 +2632,9 @@ endType:
+@@ -2190,119 +2635,9 @@ endType:
     */
    sym = gfc_current_block ();
    for (c = sym->components; c; c = c->next)
@@ -7291,7 +7377,8 @@ index f748fe3..83634ed 100644
 -	  allocatable = true;
 -	  sym->attr.alloc_comp = 1;
 -	}
--
++    check_component (c, sym, &lock_comp);
+ 
 -      /* Look for pointer components.  */
 -      if (c->attr.pointer
 -	  || (c->ts.type == BT_CLASS && c->attr.class_ok
@@ -7301,8 +7388,7 @@ index f748fe3..83634ed 100644
 -	  pointer = true;
 -	  sym->attr.pointer_comp = 1;
 -	}
-+    check_component (c, sym, &lock_comp);
- 
+-
 -      /* Look for procedure pointer components.  */
 -      if (c->attr.proc_pointer
 -	  || (c->ts.type == BT_DERIVED
@@ -7395,7 +7481,7 @@ index f748fe3..83634ed 100644
  
    pop_state ();
  }
-@@ -2685,6 +3017,7 @@ loop:
+@@ -2685,6 +3020,7 @@ loop:
      case ST_PARAMETER:
      case ST_PUBLIC:
      case ST_PRIVATE:
@@ -7403,7 +7489,7 @@ index f748fe3..83634ed 100644
      case ST_DERIVED_DECL:
      case_decl:
  declSt:
-@@ -2701,6 +3034,10 @@ declSt:
+@@ -2701,6 +3037,10 @@ declSt:
  	  parse_interface ();
  	  break;
  
@@ -7414,7 +7500,7 @@ index f748fe3..83634ed 100644
  	case ST_DERIVED_DECL:
  	  parse_derived ();
  	  break;
-@@ -3938,9 +4275,9 @@ gfc_fixup_sibling_symbols (gfc_symbol *sym, gfc_namespace *siblings)
+@@ -3938,9 +4278,9 @@ gfc_fixup_sibling_symbols (gfc_symbol *sym, gfc_namespace *siblings)
        if (!st || (st->n.sym->attr.dummy && ns == st->n.sym->ns))
  	goto fixup_contained;
  
@@ -7427,7 +7513,7 @@ index f748fe3..83634ed 100644
  	goto fixup_contained;
  
 diff --git a/gcc/fortran/parse.h b/gcc/fortran/parse.h
-index dbe3c49..a8c9cf9 100644
+index dbe3c49ad6b..a8c9cf9625f 100644
 --- a/gcc/fortran/parse.h
 +++ b/gcc/fortran/parse.h
 @@ -27,6 +27,7 @@ typedef enum
@@ -7455,7 +7541,7 @@ index dbe3c49..a8c9cf9 100644
  match gfc_match_enumerator_def (void);
  void gfc_free_enum_history (void);
 diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
-index a94ae21..8a3e485 100644
+index a94ae216dd5..8a3e4854525 100644
 --- a/gcc/fortran/primary.c
 +++ b/gcc/fortran/primary.c
 @@ -107,116 +107,51 @@ get_kind (int *is_iso_c)
@@ -7933,7 +8019,7 @@ index a94ae21..8a3e485 100644
  
    expr = gfc_get_expr ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index c16e3d0..abf65c5 100644
+index c16e3d0b0a0..abf65c5caf2 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -520,7 +520,7 @@ static void
@@ -9845,7 +9931,7 @@ index c16e3d0..abf65c5 100644
  	return FAILURE;
  
 diff --git a/gcc/fortran/scanner.c b/gcc/fortran/scanner.c
-index f714ed0..d762e6c 100644
+index f714ed01a54..d762e6c2a58 100644
 --- a/gcc/fortran/scanner.c
 +++ b/gcc/fortran/scanner.c
 @@ -332,14 +332,9 @@ add_path_to_list (gfc_directorylist **list, const char *path,
@@ -9867,7 +9953,7 @@ index f714ed0..d762e6c 100644
      }
    else if (!S_ISDIR (st.st_mode))
 diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
-index 65c65a3..eca7da4 100644
+index 65c65a300d2..eca7da4709c 100644
 --- a/gcc/fortran/simplify.c
 +++ b/gcc/fortran/simplify.c
 @@ -1699,6 +1699,144 @@ gfc_simplify_conjg (gfc_expr *e)
@@ -10060,7 +10146,7 @@ index 65c65a3..eca7da4 100644
  {
    gfc_expr *result;
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index 785f582..4134c64 100644
+index 785f58200c2..4134c643dc7 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -40,6 +40,7 @@ const mstring flavors[] =
@@ -10450,7 +10536,7 @@ index 785f582..4134c64 100644
    return intr ? intr->sym : NULL;
  }
 diff --git a/gcc/fortran/target-memory.c b/gcc/fortran/target-memory.c
-index 26a5de2..4fe7d5c 100644
+index 26a5de2326d..4fe7d5c23a4 100644
 --- a/gcc/fortran/target-memory.c
 +++ b/gcc/fortran/target-memory.c
 @@ -107,8 +107,8 @@ gfc_element_size (gfc_expr *e)
@@ -10495,7 +10581,7 @@ index 26a5de2..4fe7d5c 100644
        for (c = gfc_constructor_first (e->value.constructor),
  	   cmp = e->ts.u.derived->components;
 diff --git a/gcc/fortran/trans-const.c b/gcc/fortran/trans-const.c
-index a217c47..60ce458 100644
+index a217c471411..60ce458a42d 100644
 --- a/gcc/fortran/trans-const.c
 +++ b/gcc/fortran/trans-const.c
 @@ -308,7 +308,8 @@ gfc_conv_constant_to_tree (gfc_expr * expr)
@@ -10509,7 +10595,7 @@ index a217c47..60ce458 100644
  			 " has undefined result at %L", &expr->where);
  	  return fold_convert (gfc_get_logical_type (expr->ts.kind), tmp);
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index b473d66..6c6fd5b 100644
+index b473d660e73..6c6fd5bcf3d 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -593,7 +593,7 @@ gfc_finish_var_decl (tree decl, gfc_symbol * sym)
@@ -10625,7 +10711,7 @@ index b473d66..6c6fd5b 100644
  	return false;
        cm = expr->ts.u.derived->components;
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index 456b2ce..ccb611d 100644
+index 456b2ceadff..ccb611dd06e 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1550,6 +1550,7 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
@@ -10747,7 +10833,7 @@ index 456b2ce..ccb611d 100644
  
      default:
 diff --git a/gcc/fortran/trans-intrinsic.c b/gcc/fortran/trans-intrinsic.c
-index 273c86f..38fd8f4 100644
+index 273c86ff4d7..38fd8f4c2d5 100644
 --- a/gcc/fortran/trans-intrinsic.c
 +++ b/gcc/fortran/trans-intrinsic.c
 @@ -97,6 +97,12 @@ gfc_intrinsic_map_t;
@@ -10788,7 +10874,7 @@ index 273c86f..38fd8f4 100644
  #undef DEFINE_MATH_BUILTIN_C
  
 diff --git a/gcc/fortran/trans-io.c b/gcc/fortran/trans-io.c
-index a11453d..2318201 100644
+index a11453d082d..231820169b3 100644
 --- a/gcc/fortran/trans-io.c
 +++ b/gcc/fortran/trans-io.c
 @@ -1005,6 +1005,15 @@ gfc_trans_open (gfc_code * code)
@@ -10835,7 +10921,7 @@ index a11453d..2318201 100644
  	    && !is_subref_array (expr))
  	{
 diff --git a/gcc/fortran/trans-stmt.c b/gcc/fortran/trans-stmt.c
-index 1d8588d..68cfb65 100644
+index 1d8588d6072..68cfb65c1fa 100644
 --- a/gcc/fortran/trans-stmt.c
 +++ b/gcc/fortran/trans-stmt.c
 @@ -5471,7 +5471,7 @@ gfc_trans_deallocate (gfc_code *code)
@@ -10848,7 +10934,7 @@ index 1d8588d..68cfb65 100644
  	      gfc_ref *ref;
  	      gfc_ref *last = NULL;
 diff --git a/gcc/fortran/trans-types.c b/gcc/fortran/trans-types.c
-index 30561ee..9430c5a 100644
+index 30561ee7ecf..9430c5a5cec 100644
 --- a/gcc/fortran/trans-types.c
 +++ b/gcc/fortran/trans-types.c
 @@ -1100,6 +1100,10 @@ gfc_typenode_for_spec (gfc_typespec * spec)
@@ -10937,7 +11023,7 @@ index 30561ee..9430c5a 100644
      {
        if (c->attr.proc_pointer)
 diff --git a/gcc/fortran/trans.c b/gcc/fortran/trans.c
-index d7bdf26..11e76d3 100644
+index d7bdf268a37..11e76d3c03f 100644
 --- a/gcc/fortran/trans.c
 +++ b/gcc/fortran/trans.c
 @@ -1041,7 +1041,7 @@ gfc_build_final_call (gfc_typespec ts, gfc_expr *final_wrapper, gfc_expr *var,
@@ -10960,7 +11046,7 @@ index d7bdf26..11e76d3 100644
        tmp = gfc_deallocate_alloc_comp (ts.u.derived, tmp, 0);
 diff --git a/gcc/testsuite/gfortran.dg/assert.inc b/gcc/testsuite/gfortran.dg/assert.inc
 new file mode 100644
-index 0000000..40512b0
+index 00000000000..40512b00393
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/assert.inc
 @@ -0,0 +1,62 @@
@@ -11028,7 +11114,7 @@ index 0000000..40512b0
 +      endsubroutine
 diff --git a/gcc/testsuite/gfortran.dg/auto_save_2.f90 b/gcc/testsuite/gfortran.dg/auto_save_2.f90
 new file mode 100644
-index 0000000..0d39d48
+index 00000000000..0d39d484e52
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/auto_save_2.f90
 @@ -0,0 +1,52 @@
@@ -11086,7 +11172,7 @@ index 0000000..0d39d48
 +end
 diff --git a/gcc/testsuite/gfortran.dg/dec/README b/gcc/testsuite/gfortran.dg/dec/README
 new file mode 100644
-index 0000000..56973d2
+index 00000000000..56973d2c9f8
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/README
 @@ -0,0 +1,12 @@
@@ -11104,7 +11190,7 @@ index 0000000..56973d2
 +notice and this notice are preserved.
 diff --git a/gcc/testsuite/gfortran.dg/dec/achar.f90 b/gcc/testsuite/gfortran.dg/dec/achar.f90
 new file mode 100644
-index 0000000..eb49db8
+index 00000000000..eb49db896d9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/achar.f90
 @@ -0,0 +1,21 @@
@@ -11131,7 +11217,7 @@ index 0000000..eb49db8
 +end
 diff --git a/gcc/testsuite/gfortran.dg/dec/assert.inc b/gcc/testsuite/gfortran.dg/dec/assert.inc
 new file mode 100644
-index 0000000..40512b0
+index 00000000000..40512b00393
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/assert.inc
 @@ -0,0 +1,62 @@
@@ -11199,7 +11285,7 @@ index 0000000..40512b0
 +      endsubroutine
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_btest.f b/gcc/testsuite/gfortran.dg/dec/bijk_btest.f
 new file mode 100644
-index 0000000..f21cb1a
+index 00000000000..f21cb1a0ea5
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_btest.f
 @@ -0,0 +1,35 @@
@@ -11240,7 +11326,7 @@ index 0000000..f21cb1a
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_float.f b/gcc/testsuite/gfortran.dg/dec/bijk_float.f
 new file mode 100644
-index 0000000..deff903
+index 00000000000..deff9034dbf
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_float.f
 @@ -0,0 +1,28 @@
@@ -11274,7 +11360,7 @@ index 0000000..deff903
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f
 new file mode 100644
-index 0000000..a7a553d
+index 00000000000..a7a553df0c0
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_iabs.f
 @@ -0,0 +1,29 @@
@@ -11309,7 +11395,7 @@ index 0000000..a7a553d
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_iand.f b/gcc/testsuite/gfortran.dg/dec/bijk_iand.f
 new file mode 100644
-index 0000000..48fd07c
+index 00000000000..48fd07cdf14
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_iand.f
 @@ -0,0 +1,29 @@
@@ -11344,7 +11430,7 @@ index 0000000..48fd07c
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f
 new file mode 100644
-index 0000000..fccc6b4
+index 00000000000..fccc6b4b6ff
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibclr.f
 @@ -0,0 +1,29 @@
@@ -11379,7 +11465,7 @@ index 0000000..fccc6b4
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f
 new file mode 100644
-index 0000000..5d39a0a
+index 00000000000..5d39a0ad4d5
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_ibset.f
 @@ -0,0 +1,29 @@
@@ -11414,7 +11500,7 @@ index 0000000..5d39a0a
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f
 new file mode 100644
-index 0000000..f38ac9e
+index 00000000000..f38ac9ef93b
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_ieor.f
 @@ -0,0 +1,29 @@
@@ -11449,7 +11535,7 @@ index 0000000..f38ac9e
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_ior.f b/gcc/testsuite/gfortran.dg/dec/bijk_ior.f
 new file mode 100644
-index 0000000..70e9a2b
+index 00000000000..70e9a2bd5c8
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_ior.f
 @@ -0,0 +1,29 @@
@@ -11484,7 +11570,7 @@ index 0000000..70e9a2b
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bijk_mod.f b/gcc/testsuite/gfortran.dg/dec/bijk_mod.f
 new file mode 100644
-index 0000000..6cf5822
+index 00000000000..6cf5822dd15
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bijk_mod.f
 @@ -0,0 +1,29 @@
@@ -11519,7 +11605,7 @@ index 0000000..6cf5822
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and1.f b/gcc/testsuite/gfortran.dg/dec/bits_and1.f
 new file mode 100644
-index 0000000..eb184ae
+index 00000000000..eb184aeeecf
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_and1.f
 @@ -0,0 +1,29 @@
@@ -11554,7 +11640,7 @@ index 0000000..eb184ae
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and2.f b/gcc/testsuite/gfortran.dg/dec/bits_and2.f
 new file mode 100644
-index 0000000..53205a2
+index 00000000000..53205a274ba
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_and2.f
 @@ -0,0 +1,29 @@
@@ -11589,7 +11675,7 @@ index 0000000..53205a2
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and4.f b/gcc/testsuite/gfortran.dg/dec/bits_and4.f
 new file mode 100644
-index 0000000..968f85a
+index 00000000000..968f85a7643
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_and4.f
 @@ -0,0 +1,29 @@
@@ -11624,7 +11710,7 @@ index 0000000..968f85a
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_and8.f b/gcc/testsuite/gfortran.dg/dec/bits_and8.f
 new file mode 100644
-index 0000000..c5b9383
+index 00000000000..c5b9383f9ea
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_and8.f
 @@ -0,0 +1,29 @@
@@ -11659,7 +11745,7 @@ index 0000000..c5b9383
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f
 new file mode 100644
-index 0000000..0e271f7
+index 00000000000..0e271f71f27
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv1.f
 @@ -0,0 +1,29 @@
@@ -11694,7 +11780,7 @@ index 0000000..0e271f7
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f
 new file mode 100644
-index 0000000..fc30234
+index 00000000000..fc30234848a
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv2.f
 @@ -0,0 +1,29 @@
@@ -11729,7 +11815,7 @@ index 0000000..fc30234
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f
 new file mode 100644
-index 0000000..76802b8
+index 00000000000..76802b81ec6
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv4.f
 @@ -0,0 +1,29 @@
@@ -11764,7 +11850,7 @@ index 0000000..76802b8
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f
 new file mode 100644
-index 0000000..f9804cb
+index 00000000000..f9804cbe9cd
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_eqv8.f
 @@ -0,0 +1,29 @@
@@ -11799,7 +11885,7 @@ index 0000000..f9804cb
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f
 new file mode 100644
-index 0000000..9463ad3
+index 00000000000..9463ad33522
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv1.f
 @@ -0,0 +1,29 @@
@@ -11834,7 +11920,7 @@ index 0000000..9463ad3
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f
 new file mode 100644
-index 0000000..cc0dca4
+index 00000000000..cc0dca41254
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv2.f
 @@ -0,0 +1,29 @@
@@ -11869,7 +11955,7 @@ index 0000000..cc0dca4
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f
 new file mode 100644
-index 0000000..e5eb3a7
+index 00000000000..e5eb3a7903e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv4.f
 @@ -0,0 +1,29 @@
@@ -11904,7 +11990,7 @@ index 0000000..e5eb3a7
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f
 new file mode 100644
-index 0000000..1878e99
+index 00000000000..1878e9941f5
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_neqv8.f
 @@ -0,0 +1,29 @@
@@ -11939,7 +12025,7 @@ index 0000000..1878e99
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not1.f b/gcc/testsuite/gfortran.dg/dec/bits_not1.f
 new file mode 100644
-index 0000000..4bd46a7
+index 00000000000..4bd46a722fc
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_not1.f
 @@ -0,0 +1,28 @@
@@ -11973,7 +12059,7 @@ index 0000000..4bd46a7
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not2.f b/gcc/testsuite/gfortran.dg/dec/bits_not2.f
 new file mode 100644
-index 0000000..11926d2
+index 00000000000..11926d2aff7
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_not2.f
 @@ -0,0 +1,28 @@
@@ -12007,7 +12093,7 @@ index 0000000..11926d2
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not4.f b/gcc/testsuite/gfortran.dg/dec/bits_not4.f
 new file mode 100644
-index 0000000..13dc874
+index 00000000000..13dc8749ed2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_not4.f
 @@ -0,0 +1,28 @@
@@ -12041,7 +12127,7 @@ index 0000000..13dc874
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_not8.f b/gcc/testsuite/gfortran.dg/dec/bits_not8.f
 new file mode 100644
-index 0000000..6b498d8
+index 00000000000..6b498d808c1
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_not8.f
 @@ -0,0 +1,28 @@
@@ -12075,7 +12161,7 @@ index 0000000..6b498d8
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or1.f b/gcc/testsuite/gfortran.dg/dec/bits_or1.f
 new file mode 100644
-index 0000000..83011c0
+index 00000000000..83011c022cc
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_or1.f
 @@ -0,0 +1,29 @@
@@ -12110,7 +12196,7 @@ index 0000000..83011c0
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or2.f b/gcc/testsuite/gfortran.dg/dec/bits_or2.f
 new file mode 100644
-index 0000000..027f570
+index 00000000000..027f5709b48
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_or2.f
 @@ -0,0 +1,29 @@
@@ -12145,7 +12231,7 @@ index 0000000..027f570
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or4.f b/gcc/testsuite/gfortran.dg/dec/bits_or4.f
 new file mode 100644
-index 0000000..01966c0
+index 00000000000..01966c0e97e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_or4.f
 @@ -0,0 +1,29 @@
@@ -12180,7 +12266,7 @@ index 0000000..01966c0
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/bits_or8.f b/gcc/testsuite/gfortran.dg/dec/bits_or8.f
 new file mode 100644
-index 0000000..66feb6a
+index 00000000000..66feb6ac835
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/bits_or8.f
 @@ -0,0 +1,29 @@
@@ -12215,7 +12301,7 @@ index 0000000..66feb6a
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/buffer.inc b/gcc/testsuite/gfortran.dg/dec/buffer.inc
 new file mode 100644
-index 0000000..7a128c4
+index 00000000000..7a128c40467
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/buffer.inc
 @@ -0,0 +1,40 @@
@@ -12261,7 +12347,7 @@ index 0000000..7a128c4
 +	END STRUCTURE
 diff --git a/gcc/testsuite/gfortran.dg/dec/cray_assumed.f b/gcc/testsuite/gfortran.dg/dec/cray_assumed.f
 new file mode 100644
-index 0000000..cffd04a
+index 00000000000..cffd04a5fb3
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/cray_assumed.f
 @@ -0,0 +1,15 @@
@@ -12282,7 +12368,7 @@ index 0000000..cffd04a
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dlines.f b/gcc/testsuite/gfortran.dg/dec/dlines.f
 new file mode 100644
-index 0000000..4134130
+index 00000000000..41341309d26
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dlines.f
 @@ -0,0 +1,18 @@
@@ -12306,7 +12392,7 @@ index 0000000..4134130
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot1.f b/gcc/testsuite/gfortran.dg/dec/dot1.f
 new file mode 100644
-index 0000000..5094c2c
+index 00000000000..5094c2c83a7
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot1.f
 @@ -0,0 +1,19 @@
@@ -12331,7 +12417,7 @@ index 0000000..5094c2c
 +        end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot10.f b/gcc/testsuite/gfortran.dg/dec/dot10.f
 new file mode 100644
-index 0000000..0f2b25a
+index 00000000000..0f2b25ae1c1
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot10.f
 @@ -0,0 +1,40 @@
@@ -12377,7 +12463,7 @@ index 0000000..0f2b25a
 +      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot11.f b/gcc/testsuite/gfortran.dg/dec/dot11.f
 new file mode 100644
-index 0000000..248f818
+index 00000000000..248f818f3bf
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot11.f
 @@ -0,0 +1,40 @@
@@ -12423,7 +12509,7 @@ index 0000000..248f818
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot12.f b/gcc/testsuite/gfortran.dg/dec/dot12.f
 new file mode 100644
-index 0000000..395fc14
+index 00000000000..395fc145d2d
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot12.f
 @@ -0,0 +1,31 @@
@@ -12460,7 +12546,7 @@ index 0000000..395fc14
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot13.f b/gcc/testsuite/gfortran.dg/dec/dot13.f
 new file mode 100644
-index 0000000..4642871
+index 00000000000..4642871eb9d
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot13.f
 @@ -0,0 +1,47 @@
@@ -12513,7 +12599,7 @@ index 0000000..4642871
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot2.f b/gcc/testsuite/gfortran.dg/dec/dot2.f
 new file mode 100644
-index 0000000..8f02f41
+index 00000000000..8f02f41d54d
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot2.f
 @@ -0,0 +1,9 @@
@@ -12528,7 +12614,7 @@ index 0000000..8f02f41
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot3.f b/gcc/testsuite/gfortran.dg/dec/dot3.f
 new file mode 100644
-index 0000000..a29b162
+index 00000000000..a29b1620eb0
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot3.f
 @@ -0,0 +1,47 @@
@@ -12581,7 +12667,7 @@ index 0000000..a29b162
 +       end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot4.f b/gcc/testsuite/gfortran.dg/dec/dot4.f
 new file mode 100644
-index 0000000..2900565
+index 00000000000..2900565358e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot4.f
 @@ -0,0 +1,17 @@
@@ -12604,7 +12690,7 @@ index 0000000..2900565
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot5.f b/gcc/testsuite/gfortran.dg/dec/dot5.f
 new file mode 100644
-index 0000000..4297909
+index 00000000000..42979092dc8
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot5.f
 @@ -0,0 +1,41 @@
@@ -12651,7 +12737,7 @@ index 0000000..4297909
 +       end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot6.f b/gcc/testsuite/gfortran.dg/dec/dot6.f
 new file mode 100644
-index 0000000..28ebb26
+index 00000000000..28ebb26e5fb
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot6.f
 @@ -0,0 +1,71 @@
@@ -12728,7 +12814,7 @@ index 0000000..28ebb26
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot7.f b/gcc/testsuite/gfortran.dg/dec/dot7.f
 new file mode 100644
-index 0000000..8ef658c
+index 00000000000..8ef658c981f
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot7.f
 @@ -0,0 +1,52 @@
@@ -12786,7 +12872,7 @@ index 0000000..8ef658c
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot8.f b/gcc/testsuite/gfortran.dg/dec/dot8.f
 new file mode 100644
-index 0000000..5efcd01
+index 00000000000..5efcd01e5e9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot8.f
 @@ -0,0 +1,46 @@
@@ -12838,7 +12924,7 @@ index 0000000..5efcd01
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot9.f b/gcc/testsuite/gfortran.dg/dec/dot9.f
 new file mode 100644
-index 0000000..40ffe53
+index 00000000000..40ffe53dea2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot9.f
 @@ -0,0 +1,47 @@
@@ -12891,7 +12977,7 @@ index 0000000..40ffe53
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad1.f b/gcc/testsuite/gfortran.dg/dec/dot_bad1.f
 new file mode 100644
-index 0000000..35f7d7e
+index 00000000000..35f7d7e2fcf
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot_bad1.f
 @@ -0,0 +1,28 @@
@@ -12925,7 +13011,7 @@ index 0000000..35f7d7e
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad2.f b/gcc/testsuite/gfortran.dg/dec/dot_bad2.f
 new file mode 100644
-index 0000000..9e37600
+index 00000000000..9e37600838a
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot_bad2.f
 @@ -0,0 +1,11 @@
@@ -12942,7 +13028,7 @@ index 0000000..9e37600
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad3.f b/gcc/testsuite/gfortran.dg/dec/dot_bad3.f
 new file mode 100644
-index 0000000..1172fcd
+index 00000000000..1172fcdd83c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot_bad3.f
 @@ -0,0 +1,10 @@
@@ -12958,7 +13044,7 @@ index 0000000..1172fcd
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad4.f b/gcc/testsuite/gfortran.dg/dec/dot_bad4.f
 new file mode 100644
-index 0000000..e998f6d
+index 00000000000..e998f6d40ad
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot_bad4.f
 @@ -0,0 +1,18 @@
@@ -12982,7 +13068,7 @@ index 0000000..e998f6d
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/dot_bad5.f b/gcc/testsuite/gfortran.dg/dec/dot_bad5.f
 new file mode 100644
-index 0000000..9df0916
+index 00000000000..9df0916d18c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/dot_bad5.f
 @@ -0,0 +1,20 @@
@@ -13008,7 +13094,7 @@ index 0000000..9df0916
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/exint_1.f b/gcc/testsuite/gfortran.dg/dec/exint_1.f
 new file mode 100644
-index 0000000..8267536
+index 00000000000..826753614ef
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/exint_1.f
 @@ -0,0 +1,35 @@
@@ -13049,7 +13135,7 @@ index 0000000..8267536
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/float_noe.f b/gcc/testsuite/gfortran.dg/dec/float_noe.f
 new file mode 100644
-index 0000000..c4c1cc5
+index 00000000000..c4c1cc5d152
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/float_noe.f
 @@ -0,0 +1,21 @@
@@ -13076,7 +13162,7 @@ index 0000000..c4c1cc5
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/init_default.f b/gcc/testsuite/gfortran.dg/dec/init_default.f
 new file mode 100644
-index 0000000..6207177
+index 00000000000..62071774310
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/init_default.f
 @@ -0,0 +1,27 @@
@@ -13109,7 +13195,7 @@ index 0000000..6207177
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/init_derived.f b/gcc/testsuite/gfortran.dg/dec/init_derived.f
 new file mode 100644
-index 0000000..dcf1e69
+index 00000000000..dcf1e69b138
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/init_derived.f
 @@ -0,0 +1,48 @@
@@ -13163,7 +13249,7 @@ index 0000000..dcf1e69
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/init_old.f b/gcc/testsuite/gfortran.dg/dec/init_old.f
 new file mode 100644
-index 0000000..bd41477
+index 00000000000..bd414770357
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/init_old.f
 @@ -0,0 +1,110 @@
@@ -13279,7 +13365,7 @@ index 0000000..bd41477
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/init_old_bad.f b/gcc/testsuite/gfortran.dg/dec/init_old_bad.f
 new file mode 100644
-index 0000000..4a6abd1
+index 00000000000..4a6abd16ae2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/init_old_bad.f
 @@ -0,0 +1,19 @@
@@ -13304,7 +13390,7 @@ index 0000000..4a6abd1
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccdef.f b/gcc/testsuite/gfortran.dg/dec/io_ccdef.f
 new file mode 100644
-index 0000000..29c3891
+index 00000000000..29c38914391
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_ccdef.f
 @@ -0,0 +1,53 @@
@@ -13363,7 +13449,7 @@ index 0000000..29c3891
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccfort.f b/gcc/testsuite/gfortran.dg/dec/io_ccfort.f
 new file mode 100644
-index 0000000..daf2d4c
+index 00000000000..daf2d4c9e58
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_ccfort.f
 @@ -0,0 +1,54 @@
@@ -13423,7 +13509,7 @@ index 0000000..daf2d4c
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_cclist.f b/gcc/testsuite/gfortran.dg/dec/io_cclist.f
 new file mode 100644
-index 0000000..c0ab30e
+index 00000000000..c0ab30e721b
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_cclist.f
 @@ -0,0 +1,54 @@
@@ -13483,7 +13569,7 @@ index 0000000..c0ab30e
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_ccnone.f b/gcc/testsuite/gfortran.dg/dec/io_ccnone.f
 new file mode 100644
-index 0000000..c31d289
+index 00000000000..c31d289a7a7
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_ccnone.f
 @@ -0,0 +1,55 @@
@@ -13544,7 +13630,7 @@ index 0000000..c31d289
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_readonly.f b/gcc/testsuite/gfortran.dg/dec/io_readonly.f
 new file mode 100644
-index 0000000..06fbea0
+index 00000000000..06fbea016f9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_readonly.f
 @@ -0,0 +1,23 @@
@@ -13573,7 +13659,7 @@ index 0000000..06fbea0
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/io_shared.f b/gcc/testsuite/gfortran.dg/dec/io_shared.f
 new file mode 100644
-index 0000000..b738e75
+index 00000000000..b738e755d77
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/io_shared.f
 @@ -0,0 +1,18 @@
@@ -13597,7 +13683,7 @@ index 0000000..b738e75
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/lazy_ints.f b/gcc/testsuite/gfortran.dg/dec/lazy_ints.f
 new file mode 100644
-index 0000000..c19c68d
+index 00000000000..c19c68d2664
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/lazy_ints.f
 @@ -0,0 +1,76 @@
@@ -13679,7 +13765,7 @@ index 0000000..c19c68d
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f
 new file mode 100644
-index 0000000..a310e4d
+index 00000000000..a310e4d2ae4
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/linefeed_fixed.f
 @@ -0,0 +1,10 @@
@@ -13695,7 +13781,7 @@ index 0000000..a310e4d
 +      END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/linefeed_free.f b/gcc/testsuite/gfortran.dg/dec/linefeed_free.f
 new file mode 100644
-index 0000000..6dd8fa0
+index 00000000000..6dd8fa084c9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/linefeed_free.f
 @@ -0,0 +1,10 @@
@@ -13711,7 +13797,7 @@ index 0000000..6dd8fa0
 +END PROGRAM MAIN
 diff --git a/gcc/testsuite/gfortran.dg/dec/loc_rval.f b/gcc/testsuite/gfortran.dg/dec/loc_rval.f
 new file mode 100644
-index 0000000..2b8655e
+index 00000000000..2b8655e5033
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/loc_rval.f
 @@ -0,0 +1,18 @@
@@ -13735,7 +13821,7 @@ index 0000000..2b8655e
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/math.f90 b/gcc/testsuite/gfortran.dg/dec/math.f90
 new file mode 100644
-index 0000000..d9960b1
+index 00000000000..d9960b1b4b3
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/math.f90
 @@ -0,0 +1,287 @@
@@ -14028,7 +14114,7 @@ index 0000000..d9960b1
 +end
 diff --git a/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot1.for b/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot1.for
 new file mode 100644
-index 0000000..514cd11
+index 00000000000..514cd11e929
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot1.for
 @@ -0,0 +1,66 @@
@@ -14100,7 +14186,7 @@ index 0000000..514cd11
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot2.for b/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot2.for
 new file mode 100644
-index 0000000..49ac578
+index 00000000000..49ac5789d76
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/nocomp/nocomp_dot2.for
 @@ -0,0 +1,48 @@
@@ -14154,7 +14240,7 @@ index 0000000..49ac578
 +end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/nocomp/others.for b/gcc/testsuite/gfortran.dg/dec/nocomp/others.for
 new file mode 100644
-index 0000000..173020c
+index 00000000000..173020cd469
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/nocomp/others.for
 @@ -0,0 +1,40 @@
@@ -14200,7 +14286,7 @@ index 0000000..173020c
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/nocomp/union_type.for b/gcc/testsuite/gfortran.dg/dec/nocomp/union_type.for
 new file mode 100644
-index 0000000..a65172d
+index 00000000000..a65172d7be2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/nocomp/union_type.for
 @@ -0,0 +1,20 @@
@@ -14224,9 +14310,186 @@ index 0000000..a65172d
 +8     format (z5,z5,z5)
 +
 +      end program main
+diff --git a/gcc/testsuite/gfortran.dg/dec/parameter_1.f b/gcc/testsuite/gfortran.dg/dec/parameter_1.f
+new file mode 100644
+index 00000000000..69ffa53c806
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/parameter_1.f
+@@ -0,0 +1,64 @@
++        ! { dg-do run }
++        ! { dg-options "-ffixed-form -std=legacy" }
++        !
++        ! Test DEC-style PARAMETER statements without parentheses in
++        ! fixed form.
++        !
++
++        subroutine sub1(t, x, y)
++          implicit real(8) (A-H,O-Z)
++          parameter   (pi_1 = 3.141592654d0, f_1 = 3.d08)
++          parameter    pi_2 = 3.141592654d0, f_2 = 3.d08
++          ! Note that if the parameter statements above are matched
++          ! incorrectly as assignments, the below specification
++          ! statements will be considered out-of-order and we see
++          ! 'unexpected specification statement'. A PARAMETER
++          ! statement should still be a specification statement.
++
++          real(8), intent(in) :: t
++          real(8), intent(out) :: x, y
++
++          real(8), volatile :: two
++          two = 2.0d0
++          x = two * pi_1 * f_1 * t
++          y = two * pi_2 * f_2 * t
++          z = two * pi_3 * f_3 * t
++          return
++        end subroutine
++
++        subroutine sub2(t, x, y, z)
++          implicit none
++          real(8) :: pi_1, pi_2, f_1, f_2
++                   parameter   (pi_1 = 3.141592654d0, f_1 = 3.d08)
++                   parameter    pi_2 = 3.141592654d0, f_2 = 3.d08
++          real(8), parameter :: pi_3 = 3.141592654d0, f_3 = 3.d08
++          ! Ditto sub1
++
++          real(8), intent(in) :: t
++          real(8), intent(out) :: x, y, z
++
++          real(8), volatile :: two
++          two = 2.0d0
++          x = two * pi_1 * f_1 * t
++          y = two * pi_2 * f_2 * t
++          z = two * pi_3 * f_3 * t
++        end subroutine
++
++        implicit none
++        real(8) :: x1, x2, y1, y2, z2
++        real(8), volatile :: t
++        t = 1.5e-6
++
++        call sub1(t, x1, y1)
++        call sub2(t, x2, y2, z2)
++
++        write(*,'(4D18.5)') t, x1, y1
++        write(*,'(4D18.5)') t, x2, y2, z2
++
++        if (x1 .ne. x2 .or. y1 .ne. y2
++     &      .or. x1 .ne. y1 .or. x2 .ne. y2
++     &      .or. y2 .ne. z2) then
++          call abort()
++        endif
++
++        end
+diff --git a/gcc/testsuite/gfortran.dg/dec/parameter_2.f90 b/gcc/testsuite/gfortran.dg/dec/parameter_2.f90
+new file mode 100644
+index 00000000000..280f0007f93
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/parameter_2.f90
+@@ -0,0 +1,63 @@
++! { dg-do run }
++! { dg-options "-ffree-form -std=legacy" }
++!
++! Test DEC-style PARAMETER statements without parentheses in free form.
++!
++
++subroutine sub1(t, x, y)
++  implicit real(8) (A-H,O-Z)
++  parameter   (pi_1 = 3.141592654d0, f_1 = 3.d08)
++  parameter    pi_2 = 3.141592654d0, f_2 = 3.d08 ! legacy PARAMETER
++  ! Note that if the parameter statements above are matched
++  ! incorrectly as assignments, the below specification
++  ! statements will be considered out-of-order and we see
++  ! 'unexpected specification statement'. A PARAMETER
++  ! statement should still be a specification statement.
++
++  real(8), intent(in) :: t
++  real(8), intent(out) :: x, y
++
++  real(8), volatile :: two
++  two = 2.0d0
++  x = two * pi_1 * f_1 * t
++  y = two * pi_2 * f_2 * t
++  z = two * pi_3 * f_3 * t
++  return
++end subroutine
++
++subroutine sub2(t, x, y, z)
++  implicit none
++  real(8) :: pi_1, pi_2, f_1, f_2
++           parameter   (pi_1 = 3.141592654d0, f_1 = 3.d08)
++           parameter    pi_2 = 3.141592654d0, f_2 = 3.d08 ! legacy PARAMETER
++  real(8), parameter :: pi_3 = 3.141592654d0, f_3 = 3.d08
++  ! Ditto sub1
++
++  real(8), intent(in) :: t
++  real(8), intent(out) :: x, y, z
++
++  real(8), volatile :: two
++  two = 2.0d0
++  x = two * pi_1 * f_1 * t
++  y = two * pi_2 * f_2 * t
++  z = two * pi_3 * f_3 * t
++end subroutine
++
++implicit none
++real(8) :: x1, x2, y1, y2, z2
++real(8), volatile :: t
++t = 1.5e-6
++
++call sub1(t, x1, y1)
++call sub2(t, x2, y2, z2)
++
++write(*,'(4D18.5)') t, x1, y1
++write(*,'(4D18.5)') t, x2, y2, z2
++
++if (x1 .ne. x2 .or. y1 .ne. y2 &
++    .or. x1 .ne. y1 .or. x2 .ne. y2 &
++    .or. y2 .ne. z2) then
++  call abort()
++endif
++
++end
+diff --git a/gcc/testsuite/gfortran.dg/dec/parameter_3.f90 b/gcc/testsuite/gfortran.dg/dec/parameter_3.f90
+new file mode 100644
+index 00000000000..92f0f61bb66
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/parameter_3.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! { dg-options "-ffree-form -std=gnu" }
++!
++! Test warnings for DEC-style PARAMETER statements with std=gnu.
++!
++
++subroutine sub()
++  implicit real(8) (A-Z)
++  parameter pi = 3.1415926535d0 ! { dg-warning "Legacy Extension: PARAMETER" }
++  print *, pi
++end subroutine
++
++end
+diff --git a/gcc/testsuite/gfortran.dg/dec/parameter_4.f90 b/gcc/testsuite/gfortran.dg/dec/parameter_4.f90
+new file mode 100644
+index 00000000000..280d56c424f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/parameter_4.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! { dg-options "-ffree-form -std=f95" }
++!
++! Test errors for DEC-style PARAMETER statements with a real standard.
++!
++
++subroutine sub()
++  implicit real(8) (A-Z)
++  parameter pi = 3.1415926535d0 ! { dg-error "Legacy Extension: PARAMETER" }
++  print *, pi
++end subroutine
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dec/static_1.f b/gcc/testsuite/gfortran.dg/dec/static_1.f
 new file mode 100644
-index 0000000..85c4afa
+index 00000000000..85c4afa95aa
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/static_1.f
 @@ -0,0 +1,31 @@
@@ -14263,7 +14526,7 @@ index 0000000..85c4afa
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/dec/static_2.f b/gcc/testsuite/gfortran.dg/dec/static_2.f
 new file mode 100644
-index 0000000..2da7d15
+index 00000000000..2da7d15944d
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/static_2.f
 @@ -0,0 +1,50 @@
@@ -14319,7 +14582,7 @@ index 0000000..2da7d15
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
 new file mode 100644
-index 0000000..5e2b9af
+index 00000000000..5e2b9af08f9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_adhoc.f
 @@ -0,0 +1,52 @@
@@ -14377,7 +14640,7 @@ index 0000000..5e2b9af
 +end
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_anon.f b/gcc/testsuite/gfortran.dg/dec/struct_anon.f
 new file mode 100644
-index 0000000..9a80ebc
+index 00000000000..9a80ebc3091
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_anon.f
 @@ -0,0 +1,32 @@
@@ -14415,7 +14678,7 @@ index 0000000..9a80ebc
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_array.f b/gcc/testsuite/gfortran.dg/dec/struct_array.f
 new file mode 100644
-index 0000000..7304313
+index 00000000000..730431320b9
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_array.f
 @@ -0,0 +1,27 @@
@@ -14448,7 +14711,7 @@ index 0000000..7304313
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_basic.f b/gcc/testsuite/gfortran.dg/dec/struct_basic.f
 new file mode 100644
-index 0000000..c8291b2
+index 00000000000..c8291b2e744
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_basic.f
 @@ -0,0 +1,60 @@
@@ -14514,7 +14777,7 @@ index 0000000..c8291b2
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f
 new file mode 100644
-index 0000000..acb1bfe
+index 00000000000..acb1bfe7e5c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_bad.f
 @@ -0,0 +1,18 @@
@@ -14538,7 +14801,7 @@ index 0000000..acb1bfe
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f
 new file mode 100644
-index 0000000..2d4268c
+index 00000000000..2d4268c55ac
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_fixed.f
 @@ -0,0 +1,32 @@
@@ -14576,7 +14839,7 @@ index 0000000..2d4268c
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f
 new file mode 100644
-index 0000000..b0c1a97
+index 00000000000..b0c1a97e3cc
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_fill_free.f
 @@ -0,0 +1,32 @@
@@ -14614,7 +14877,7 @@ index 0000000..b0c1a97
 +end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f
 new file mode 100644
-index 0000000..d82bda7
+index 00000000000..d82bda75279
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_name_comp.f
 @@ -0,0 +1,17 @@
@@ -14637,7 +14900,7 @@ index 0000000..d82bda7
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_name_share.f b/gcc/testsuite/gfortran.dg/dec/struct_name_share.f
 new file mode 100644
-index 0000000..7177a73
+index 00000000000..7177a7327e3
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_name_share.f
 @@ -0,0 +1,13 @@
@@ -14656,7 +14919,7 @@ index 0000000..7177a73
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/struct_record.f b/gcc/testsuite/gfortran.dg/dec/struct_record.f
 new file mode 100644
-index 0000000..6af87d4
+index 00000000000..6af87d477f2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/struct_record.f
 @@ -0,0 +1,39 @@
@@ -14699,9 +14962,94 @@ index 0000000..6af87d4
 +      call assertll ("mycar.year", mycar.year,  2013)
 +
 +      end program
+diff --git a/gcc/testsuite/gfortran.dg/dec/structure_13.f90 b/gcc/testsuite/gfortran.dg/dec/structure_13.f90
+new file mode 100644
+index 00000000000..209c7da597d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec/structure_13.f90
+@@ -0,0 +1,79 @@
++! { dg-do compile }
++! { dg-options "-fdec-structure" }
++!
++! Verify that the comparisons in gfc_compare_derived_types can correctly
++! match nested anonymous subtypes.
++!
++
++subroutine sub0 (u)
++  structure /t/
++    structure sub
++      integer i
++    end structure
++  endstructure
++  record /t/ u
++  u.sub.i = 0
++end subroutine sub0
++
++subroutine sub1 ()
++  structure /t/
++    structure sub
++      integer i
++    end structure
++  endstructure
++  record /t/ u
++
++  interface
++    subroutine sub0 (u) ! regression: Interface mismatch.*Type mismatch
++      structure /t/
++        structure sub
++          integer i
++        end structure
++      endstructure
++        record /t/ u
++    end subroutine
++  end interface
++
++  call sub0(u) ! regression: Type mismatch in argument
++end subroutine
++
++subroutine sub3(u)
++  structure /tu/
++    union
++      map
++        integer i
++      end map
++      map
++        real r
++      end map
++    end union
++  end structure
++  record /tu/ u
++  u.r = 1.0
++end subroutine
++
++structure /t/
++  structure sub
++    integer i
++  end structure
++endstructure
++
++structure /tu/
++  union
++    map
++      integer i
++    end map
++    map
++      real r
++    end map
++  end union
++end structure
++
++record /t/ u
++record /tu/ u2
++
++call sub0(u) ! regression: Type mismatch in argument
++call sub1()
++call sub2(u2)
++
++end
 diff --git a/gcc/testsuite/gfortran.dg/dec/test.txt b/gcc/testsuite/gfortran.dg/dec/test.txt
 new file mode 100644
-index 0000000..1e3cfd5
+index 00000000000..1e3cfd54d1f
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/test.txt
 @@ -0,0 +1,4 @@
@@ -14711,7 +15059,7 @@ index 0000000..1e3cfd5
 +What does this mean? I don't know.
 diff --git a/gcc/testsuite/gfortran.dg/dec/teststructs.inc b/gcc/testsuite/gfortran.dg/dec/teststructs.inc
 new file mode 100644
-index 0000000..1277a08
+index 00000000000..1277a088bb5
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/teststructs.inc
 @@ -0,0 +1,26 @@
@@ -14743,7 +15091,7 @@ index 0000000..1277a08
 +      END STRUCTURE
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic1.f b/gcc/testsuite/gfortran.dg/dec/union_basic1.f
 new file mode 100644
-index 0000000..b30ac72
+index 00000000000..b30ac72bbed
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_basic1.f
 @@ -0,0 +1,27 @@
@@ -14776,7 +15124,7 @@ index 0000000..b30ac72
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_basic2.f b/gcc/testsuite/gfortran.dg/dec/union_basic2.f
 new file mode 100644
-index 0000000..1c366bf
+index 00000000000..1c366bf165c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_basic2.f
 @@ -0,0 +1,34 @@
@@ -14816,7 +15164,7 @@ index 0000000..1c366bf
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_compare.f b/gcc/testsuite/gfortran.dg/dec/union_compare.f
 new file mode 100644
-index 0000000..4ea1e48
+index 00000000000..4ea1e48bc55
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_compare.f
 @@ -0,0 +1,35 @@
@@ -14857,7 +15205,7 @@ index 0000000..4ea1e48
 +      END PROGRAM
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_copy.f b/gcc/testsuite/gfortran.dg/dec/union_copy.f
 new file mode 100644
-index 0000000..6429258
+index 00000000000..6429258160c
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_copy.f
 @@ -0,0 +1,71 @@
@@ -14934,7 +15282,7 @@ index 0000000..6429258
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_dup.f b/gcc/testsuite/gfortran.dg/dec/union_dup.f
 new file mode 100644
-index 0000000..53cd8d9
+index 00000000000..53cd8d9d381
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_dup.f
 @@ -0,0 +1,39 @@
@@ -14979,7 +15327,7 @@ index 0000000..53cd8d9
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_empty.f b/gcc/testsuite/gfortran.dg/dec/union_empty.f
 new file mode 100644
-index 0000000..65abd0a
+index 00000000000..65abd0a357e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_empty.f
 @@ -0,0 +1,17 @@
@@ -15002,7 +15350,7 @@ index 0000000..65abd0a
 +
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_def.f b/gcc/testsuite/gfortran.dg/dec/union_init_def.f
 new file mode 100644
-index 0000000..b5ce998
+index 00000000000..b5ce998c2c2
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_init_def.f
 @@ -0,0 +1,38 @@
@@ -15046,7 +15394,7 @@ index 0000000..b5ce998
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_exp.f b/gcc/testsuite/gfortran.dg/dec/union_init_exp.f
 new file mode 100644
-index 0000000..21a9cd9
+index 00000000000..21a9cd993a0
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_init_exp.f
 @@ -0,0 +1,36 @@
@@ -15088,7 +15436,7 @@ index 0000000..21a9cd9
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f
 new file mode 100644
-index 0000000..5c8c8ef
+index 00000000000..5c8c8efc319
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_init_overlap.f
 @@ -0,0 +1,38 @@
@@ -15132,7 +15480,7 @@ index 0000000..5c8c8ef
 +      end program
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_interface.f b/gcc/testsuite/gfortran.dg/dec/union_interface.f
 new file mode 100644
-index 0000000..9c8e18f
+index 00000000000..9c8e18fcfc3
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_interface.f
 @@ -0,0 +1,55 @@
@@ -15193,7 +15541,7 @@ index 0000000..9c8e18f
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested1.f b/gcc/testsuite/gfortran.dg/dec/union_nested1.f
 new file mode 100644
-index 0000000..82a0b34
+index 00000000000..82a0b343392
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_nested1.f
 @@ -0,0 +1,72 @@
@@ -15271,7 +15619,7 @@ index 0000000..82a0b34
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_nested2.f b/gcc/testsuite/gfortran.dg/dec/union_nested2.f
 new file mode 100644
-index 0000000..aca046d
+index 00000000000..aca046daef5
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_nested2.f
 @@ -0,0 +1,80 @@
@@ -15357,7 +15705,7 @@ index 0000000..aca046d
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dec/union_ref.f b/gcc/testsuite/gfortran.dg/dec/union_ref.f
 new file mode 100644
-index 0000000..d64502a
+index 00000000000..d64502a04ad
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/union_ref.f
 @@ -0,0 +1,29 @@
@@ -15392,7 +15740,7 @@ index 0000000..d64502a
 +
 diff --git a/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for
 new file mode 100644
-index 0000000..c4d82fe
+index 00000000000..c4d82fee865
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_1.for
 @@ -0,0 +1,26 @@
@@ -15424,7 +15772,7 @@ index 0000000..c4d82fe
 +
 diff --git a/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for
 new file mode 100644
-index 0000000..a5e742f
+index 00000000000..a5e742f7640
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/warn_argtypes_2.for
 @@ -0,0 +1,26 @@
@@ -15456,7 +15804,7 @@ index 0000000..a5e742f
 +
 diff --git a/gcc/testsuite/gfortran.dg/dec/xor.f b/gcc/testsuite/gfortran.dg/dec/xor.f
 new file mode 100644
-index 0000000..ba25142
+index 00000000000..ba251421a4b
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/dec/xor.f
 @@ -0,0 +1,27 @@
@@ -15488,7 +15836,7 @@ index 0000000..ba25142
 +10    enddo
 +      end program main
 diff --git a/gcc/testsuite/gfortran.dg/dg.exp b/gcc/testsuite/gfortran.dg/dg.exp
-index 795ac8e..e3dfdfc 100644
+index 795ac8ee6b8..e3dfdfc9716 100644
 --- a/gcc/testsuite/gfortran.dg/dg.exp
 +++ b/gcc/testsuite/gfortran.dg/dg.exp
 @@ -29,6 +29,10 @@ if ![info exists DEFAULT_FFLAGS] then {
@@ -15504,7 +15852,7 @@ index 795ac8e..e3dfdfc 100644
  
 diff --git a/gcc/testsuite/gfortran.dg/init_derived_1.f b/gcc/testsuite/gfortran.dg/init_derived_1.f
 new file mode 100644
-index 0000000..c187203
+index 00000000000..c187203963d
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/init_derived_1.f
 @@ -0,0 +1,72 @@
@@ -15582,7 +15930,7 @@ index 0000000..c187203
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/init_derived_2.f b/gcc/testsuite/gfortran.dg/init_derived_2.f
 new file mode 100644
-index 0000000..36ba36d
+index 00000000000..36ba36dc3d4
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/init_derived_2.f
 @@ -0,0 +1,38 @@
@@ -15626,7 +15974,7 @@ index 0000000..36ba36d
 +      end
 diff --git a/gcc/testsuite/gfortran.dg/pr71523_1.f90 b/gcc/testsuite/gfortran.dg/pr71523_1.f90
 new file mode 100644
-index 0000000..a0bfc64
+index 00000000000..a0bfc64486e
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr71523_1.f90
 @@ -0,0 +1,20 @@
@@ -15652,7 +16000,7 @@ index 0000000..a0bfc64
 +! { dg-final { scan-tree-dump-times "arr = " 0 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/pr71523_2.f90 b/gcc/testsuite/gfortran.dg/pr71523_2.f90
 new file mode 100644
-index 0000000..3b234de
+index 00000000000..3b234de7cd8
 --- /dev/null
 +++ b/gcc/testsuite/gfortran.dg/pr71523_2.f90
 @@ -0,0 +1,36 @@
@@ -15693,7 +16041,7 @@ index 0000000..3b234de
 +
 +end
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
-index fa9c113..871d721 100644
+index fa9c1137f03..871d72133f3 100644
 --- a/libgfortran/io/close.c
 +++ b/libgfortran/io/close.c
 @@ -66,6 +66,8 @@ st_close (st_parameter_close *clp)
@@ -15725,7 +16073,7 @@ index fa9c113..871d721 100644
  	}
  
 diff --git a/libgfortran/io/file_pos.c b/libgfortran/io/file_pos.c
-index 8b4fda3..93c564a 100644
+index 8b4fda3dd91..93c564ad47b 100644
 --- a/libgfortran/io/file_pos.c
 +++ b/libgfortran/io/file_pos.c
 @@ -362,6 +362,8 @@ st_endfile (st_parameter_filepos *fpp)
@@ -15738,7 +16086,7 @@ index 8b4fda3..93c564a 100644
  	  opp.common = fpp->common;
  	  opp.common.flags &= IOPARM_COMMON_MASK;
 diff --git a/libgfortran/io/io.h b/libgfortran/io/io.h
-index e78f315..62cb4e6 100644
+index e78f3151bbd..62cb4e62904 100644
 --- a/libgfortran/io/io.h
 +++ b/libgfortran/io/io.h
 @@ -209,6 +209,18 @@ typedef enum
@@ -15794,7 +16142,7 @@ index e78f315..62cb4e6 100644
  unit_flags;
  
 diff --git a/libgfortran/io/list_read.c b/libgfortran/io/list_read.c
-index 2b80838..7f84706 100644
+index 2b80838fc9f..7f847060f7f 100644
 --- a/libgfortran/io/list_read.c
 +++ b/libgfortran/io/list_read.c
 @@ -1618,7 +1618,10 @@ read_real (st_parameter_dt *dtp, void * dest, int length)
@@ -15810,7 +16158,7 @@ index 2b80838..7f84706 100644
  
    for (;;)
 diff --git a/libgfortran/io/open.c b/libgfortran/io/open.c
-index d9cfde8..c539a4d 100644
+index d9cfde853f5..c539a4d4568 100644
 --- a/libgfortran/io/open.c
 +++ b/libgfortran/io/open.c
 @@ -48,6 +48,21 @@ static const st_option action_opt[] =
@@ -15891,7 +16239,7 @@ index d9cfde8..c539a4d 100644
      find_option (&opp->common, opp->blank, opp->blank_len,
  		 blank_opt, "Bad BLANK parameter in OPEN statement");
 diff --git a/libgfortran/io/read.c b/libgfortran/io/read.c
-index f45e1b4..9e82d23 100644
+index f45e1b4edfe..9e82d238fec 100644
 --- a/libgfortran/io/read.c
 +++ b/libgfortran/io/read.c
 @@ -1056,7 +1056,7 @@ exponent:
@@ -15914,7 +16262,7 @@ index f45e1b4..9e82d23 100644
  	  /* Unexpected end of line. Set the position.  */
  	  dtp->u.p.sf_seen_eor = 1;
 diff --git a/libgfortran/io/transfer.c b/libgfortran/io/transfer.c
-index 87c67bf..25fcbf6 100644
+index 87c67bf6a3d..25fcbf6aef9 100644
 --- a/libgfortran/io/transfer.c
 +++ b/libgfortran/io/transfer.c
 @@ -306,7 +306,8 @@ read_sf (st_parameter_dt *dtp, int * length)
@@ -15995,7 +16343,7 @@ index 87c67bf..25fcbf6 100644
  	    {
  	      dtp->u.p.current_unit->strm_pos += len;
 diff --git a/libgfortran/io/unix.c b/libgfortran/io/unix.c
-index 185d0dc..95c30c6 100644
+index 185d0dca157..95c30c6a2a4 100644
 --- a/libgfortran/io/unix.c
 +++ b/libgfortran/io/unix.c
 @@ -1341,6 +1341,41 @@ regular_file (st_parameter_open *opp, unit_flags *flags)
@@ -16091,7 +16439,7 @@ index 185d0dc..95c30c6 100644
   * with the unit.  Returns nonzero if something went wrong. */
  
 diff --git a/libgfortran/io/unix.h b/libgfortran/io/unix.h
-index bf59a8e..a90869a 100644
+index bf59a8ee1fc..a90869af3f4 100644
 --- a/libgfortran/io/unix.h
 +++ b/libgfortran/io/unix.h
 @@ -134,6 +134,9 @@ internal_proto(compare_file_filename);
@@ -16105,7 +16453,7 @@ index bf59a8e..a90869a 100644
  internal_proto(delete_file);
  
 diff --git a/libgfortran/io/write.c b/libgfortran/io/write.c
-index 4ef5586..9e60580 100644
+index 4ef5586a657..9e605808148 100644
 --- a/libgfortran/io/write.c
 +++ b/libgfortran/io/write.c
 @@ -1548,7 +1548,7 @@ list_formatted_write_scalar (st_parameter_dt *dtp, bt type, void *p, int kind,
@@ -16118,7 +16466,7 @@ index 4ef5586..9e60580 100644
    else
      {
 diff --git a/libgfortran/libgfortran.h b/libgfortran/libgfortran.h
-index 9a713d8..fa3f8ef 100644
+index 9a713d852d3..fa3f8ef5aa8 100644
 --- a/libgfortran/libgfortran.h
 +++ b/libgfortran/libgfortran.h
 @@ -634,6 +634,9 @@ st_parameter_common;
