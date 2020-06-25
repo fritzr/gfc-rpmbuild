@@ -4,8 +4,8 @@
 %global gcc_version_full 4.8.5-for
 # Note, gcc_release must be integer, if you want to add suffixes to
 # %{release}, append them after %{gcc_release} on Release: line.
-%global gcc_release 14
-%global for_patch_version 0014
+%global gcc_release 15
+%global for_patch_version 0015
 %global program_prefix gfc-
 %global _unpackaged_files_terminate_build 0
 %global _performance_build 1
