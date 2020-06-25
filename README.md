@@ -7,10 +7,7 @@ About this repository
 For instructions on building RPMs for `gfc-gfortran` see below.
 For additional help, you may find it helpful to consult the [Fedora RPM Guide](http://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html).
 
-For releases of the binary RPMs produced by this process, as well as
-instructions on installing and using the compilers with the resulting RPMs,
-see the
-[gfc-rpms repository](http://repo.rincon.com:5000/M50/gfc-rpms).
+See the [Releases](https://github.com//fritzr/gfc-rpmbuild/releases) page for pre-built binary RPMs built for CentOS 6 and 7 on x86_64.
 
 Dependencies
 ============
@@ -56,7 +53,15 @@ rpmbuild -bb SPECS/gfc-gcc.spec
 After a few hours you will find some RPMs in the `RPMS/$(uname -i)`
 subdirectory. 
 
-For releases of the binary RPMs produced by this process, as well as
-instructions on installing and using the compilers with the resulting RPMs,
-see the
-[gfc-rpms repository](http://repo.rincon.com:5000/M50/gfc-rpms).
+For pre-built releases of the binary RPMs produced by this process,
+see the [Releases](https://github.com/fritzr/gfc-rpmbuild/releases) page.
+
+Installing the RPMS
+===================
+
+The binary RPMs are built for CentOS 6 or 7 on x86_64. On these platforms,
+installing the RPMs is simple:
+
+```bash
+yum localinstall gfc-*.rpm
+```
