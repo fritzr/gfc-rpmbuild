@@ -97,7 +97,7 @@ BuildRequires: binutils >= 2.20.51.0.2
 #BuildRequires: glibc-static
 #BuildRequires: sharutils
 BuildRequires: zlib-devel, gettext, dejagnu, bison, flex 
-#BuildRequires: texinfo, texinfo-tex, /usr/bin/pod2man
+BuildRequires: texinfo, texinfo-tex, /usr/bin/pod2man
 #BuildRequires: systemtap-sdt-devel >= 1.3
 # For VTA guality testing
 BuildRequires: gdb
